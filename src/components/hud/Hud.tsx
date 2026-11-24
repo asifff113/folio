@@ -1,19 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CHAPTERS, LAST_CHAPTER, onJourneyFrame } from "@/lib/journey/store";
+import { type ChapterKey, onJourneyFrame } from "@/lib/journey/store";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /** Fixed overlay: frame, live clock, current chapter and the progress rail. */
-export function Hud({ handle, scanlines }: { handle: string; scanlines: boolean }) {
+export function Hud({ handle, scanlines, chapters }: { handle: string; scanlines: boolean; chapters: ChapterKey[] }) {
   const [chapter, setChapter] = useState(0);
+  const last = Math.max(1, chapters.length - 1);
   const fill = useRef<HTMLElement>(null);
   const clock = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const off = onJourneyFrame((s) => {
-      if (fill.current) fill.current.style.height = `${(s / LAST_CHAPTER) * 100}%`;
+      if (fill.current) fill.current.style.height = `${(s / last) * 100}%`;
       setChapter(Math.round(s));
     });
     const tickClock = () => {
@@ -25,7 +26,7 @@ export function Hud({ handle, scanlines }: { handle: string; scanlines: boolean 
       off();
       window.clearInterval(id);
     };
-  }, []);
+  }, [last]);
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[2]" aria-hidden="true">
@@ -45,17 +46,17 @@ export function Hud({ handle, scanlines }: { handle: string; scanlines: boolean 
 
         <div className="absolute bottom-4 left-5 flex items-center gap-3.5 font-mono text-[11px] font-medium tracking-[0.14em] text-holo">
           <b className="font-medium text-fg">
-            {pad(chapter + 1)} / {pad(CHAPTERS.length)}
+            {pad(chapter + 1)} / {pad(chapters.length)}
           </b>
           <span key={chapter} className="chapter-glitch">
-            {CHAPTERS[chapter]}
+            {chapters[chapter]}
           </span>
         </div>
 
         <div className="hud-rail max-[720px]:hidden">
           <i ref={fill} />
-          {CHAPTERS.map((name, k) => (
-            <span key={name} style={{ top: `${(k / LAST_CHAPTER) * 100}%` }} />
+          {chapters.map((name, k) => (
+            <span key={name} style={{ top: `${(k / last) * 100}%` }} />
           ))}
         </div>
       </div>

@@ -1,8 +1,17 @@
 import type Lenis from "lenis";
 
-/** Chapter names, in scroll order. The 3D scene has one shape per chapter. */
-export const CHAPTERS = ["BOOT", "ABOUT", "INTERESTS", "SIGNAL", "TRACES", "END"] as const;
-export const LAST_CHAPTER = CHAPTERS.length - 1;
+/**
+ * Every chapter the journey can have, in scroll order. Optional ones (HELP)
+ * are left out when switched off; the 3D scene builds one shape and one
+ * camera keyframe per chapter that is present.
+ */
+export const ALL_CHAPTERS = ["BOOT", "ABOUT", "INTERESTS", "SIGNAL", "HELP", "TRACES", "END"] as const;
+export type ChapterKey = (typeof ALL_CHAPTERS)[number];
+
+/** The chapters shown, in order, given which optional ones are on. */
+export function journeyChapters(optional: { help: boolean }): ChapterKey[] {
+  return ALL_CHAPTERS.filter((key) => key !== "HELP" || optional.help);
+}
 
 /**
  * Shared, mutable journey state. It changes every frame, so it lives outside

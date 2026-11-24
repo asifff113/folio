@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SiteConfig } from "@/config/site";
 import { signOut } from "@/app/admin/actions";
 import { getAdminSession } from "@/lib/admin/session";
@@ -10,7 +11,11 @@ import { SetupSteps } from "./SetupSteps";
  * Checks the admin session, loads fresh (uncached) content, and renders the
  * editor. Signed-out visitors go to the login page.
  */
-export async function AdminContent({ children }: { children: (site: SiteConfig) => ReactNode }) {
+export async function AdminContent({
+  children,
+}: {
+  children: (site: SiteConfig, db: SupabaseClient) => ReactNode;
+}) {
   const session = await getAdminSession();
   if (session.state === "unconfigured") return <SetupSteps />;
   if (session.state === "signed-out") redirect("/admin/login");
@@ -45,7 +50,7 @@ export async function AdminContent({ children }: { children: (site: SiteConfig) 
       </div>
     );
   }
-  return children(site);
+  return children(site, session.supabase);
 }
 
 /** Signed-in email and a sign-out button, for the admin header. */

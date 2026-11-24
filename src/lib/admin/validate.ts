@@ -1,4 +1,4 @@
-import { defaultSite, type Platform, type Section, type Theme } from "@/config/site";
+import { defaultSite, type HelpItem, type HelpSettings, type Platform, type Section, type Theme } from "@/config/site";
 
 /** Validation for everything the admin panel saves. Limits match supabase/schema.sql. */
 type Result<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -137,6 +137,71 @@ export function parseTheme(form: FormData): Result<Theme> {
       primary: primary.toLowerCase(),
       secondary: secondary.toLowerCase(),
       scanlines: form.get("scanlines") === "on",
+    },
+  };
+}
+
+/* ---------- help ---------- */
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const KINDS = new Set(["need", "offer"]);
+const URGENCIES = new Set(["low", "medium", "urgent"]);
+const STATUSES = new Set(["open", "in_progress", "solved"]);
+
+export function parseHelp(form: FormData): Result<{ settings: HelpSettings; items: HelpItem[] }> {
+  const raw = parseJson(form, "help") as { settings?: Partial<HelpSettings>; items?: unknown } | null;
+  if (!raw || typeof raw !== "object" || !Array.isArray(raw.items))
+    return { ok: false, error: "Could not read the help section. Reload and try again." };
+
+  const s = raw.settings ?? {};
+  const heading = String(s.heading ?? "").trim();
+  const intro = String(s.intro ?? "").trim();
+  if (!heading || heading.length > 80) return { ok: false, error: "The chapter heading needs 1 to 80 characters." };
+  if (intro.length > 240) return { ok: false, error: "The intro line can be at most 240 characters." };
+  if (raw.items.length > 40) return { ok: false, error: "Use at most 40 items in total." };
+
+  const seen = new Set<string>();
+  const items: HelpItem[] = [];
+  for (const entry of raw.items) {
+    const i = entry as Partial<HelpItem>;
+    const id = String(i.id ?? "");
+    const title = String(i.title ?? "").trim();
+    const details = String(i.details ?? "").trim();
+    const tags = Array.isArray(i.tags)
+      ? i.tags.map((t) => String(t).trim().replace(/^#+/, "").toLowerCase()).filter(Boolean)
+      : [];
+    if (!UUID.test(id) || seen.has(id)) return { ok: false, error: "An item has an invalid id. Reload and try again." };
+    if (!KINDS.has(String(i.kind)) || !URGENCIES.has(String(i.urgency)) || !STATUSES.has(String(i.status)))
+      return { ok: false, error: `"${title || "An item"}" has an invalid setting. Reload and try again.` };
+    if (!title || title.length > 80) return { ok: false, error: "Every item needs a title of 1 to 80 characters." };
+    if (details.length > 600) return { ok: false, error: `The details of "${title}" can be at most 600 characters.` };
+    if (tags.length > 6) return { ok: false, error: `"${title}" can have at most 6 tags.` };
+    const longTag = tags.find((t) => t.length > 24);
+    if (longTag) return { ok: false, error: `The tag "${longTag.slice(0, 30)}" is longer than 24 characters.` };
+    seen.add(id);
+    items.push({
+      id,
+      kind: i.kind as HelpItem["kind"],
+      title,
+      details,
+      tags: [...new Set(tags)],
+      urgency: i.urgency as HelpItem["urgency"],
+      status: i.status as HelpItem["status"],
+      visible: i.visible !== false,
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      settings: {
+        enabled: s.enabled !== false,
+        heading,
+        intro,
+        accept: s.accept !== false,
+        showSolved: s.showSolved !== false,
+      },
+      items,
     },
   };
 }

@@ -1,7 +1,7 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { defaultSite, type SiteConfig, type Theme } from "@/config/site";
+import { defaultSite, type HelpItem, type HelpSettings, type SiteConfig, type Theme } from "@/config/site";
 import { createPublicClient } from "@/lib/supabase/clients";
 
 /** Cache tag for everything the public site reads. Admin saves expire it. */
@@ -16,20 +16,28 @@ type ProfileRow = {
   interests_heading: string;
   interests_tags: string[];
   theme: Partial<Theme> | null;
+  help: Partial<HelpSettings> | null;
 };
 
 type PlatformRow = { id: string; label: string; url: string; color: string; visible: boolean };
 type SectionRow = { key: string; title: string; enabled: boolean };
 
+/**
+ * Help items in display order. Public reads only get visible items (row level
+ * security); the admin client gets all of them.
+ */
+const HELP_COLUMNS = "id,kind,title,details,tags,urgency,status,visible";
+
 /** Reads all site content with the given client. Returns null on any error. */
 export async function readSiteContent(supabase: SupabaseClient): Promise<SiteConfig | null> {
-  const [profile, platforms, sections] = await Promise.all([
+  const [profile, platforms, sections, help] = await Promise.all([
     supabase.from("profile").select("*").eq("id", 1).maybeSingle<ProfileRow>(),
     supabase.from("platforms").select("id,label,url,color,visible").order("sort").returns<PlatformRow[]>(),
     supabase.from("sections").select("key,title,enabled").order("sort").returns<SectionRow[]>(),
+    supabase.from("help_items").select(HELP_COLUMNS).order("sort").returns<HelpItem[]>(),
   ]);
 
-  const error = profile.error ?? platforms.error ?? sections.error;
+  const error = profile.error ?? platforms.error ?? sections.error ?? help.error;
   if (error) {
     console.error("[content] Supabase read failed:", error.message);
     return null;
@@ -51,6 +59,7 @@ export async function readSiteContent(supabase: SupabaseClient): Promise<SiteCon
     platforms: platforms.data ?? defaultSite.platforms,
     sections: sections.data ?? defaultSite.sections,
     theme: { ...defaultSite.theme, ...(p?.theme ?? {}) },
+    help: { ...defaultSite.help, ...(p?.help ?? {}), items: help.data ?? [] },
   };
 }
 

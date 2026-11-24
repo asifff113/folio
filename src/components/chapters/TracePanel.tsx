@@ -9,7 +9,7 @@ const time = (ms: number) => new Date(ms).toTimeString().slice(0, 5);
 
 /**
  * Trace log plus the "leave your trace" form.
- * Phase 2: traces stay in this browser. Phase 4 saves them and detects the referrer.
+ * Phase 2: traces stay in this browser. Phase 5 saves them and detects the referrer.
  */
 export function TracePanel({ platforms }: { platforms: Platform[] }) {
   const traces = useTraces();
@@ -57,14 +57,14 @@ export function TracePanel({ platforms }: { platforms: Platform[] }) {
     >
       <h2 className="panel-title">Leave your trace.</h2>
 
-      <ul className="mb-3.5 max-h-[180px] overflow-hidden">
+      <ul className="mb-4 max-h-[240px] overflow-hidden">
         {traces
           .slice(-6)
           .reverse()
           .map((t) => (
             <li
               key={t.id}
-              className={`grid grid-cols-[auto_8px_minmax(0,1fr)_auto] items-center gap-2 border-b border-holo/10 py-[5px] font-mono text-[11px] text-[#9fdcef] ${t.id === freshId ? "trace-new" : ""}`}
+              className={`grid grid-cols-[auto_8px_minmax(0,1fr)_auto] items-center gap-2.5 border-b border-holo/10 py-2 font-mono text-[13px] text-[#b4e8f5] ${t.id === freshId ? "trace-new" : ""}`}
             >
               <span>{time(t.createdAt)}</span>
               <i className="size-[7px] rounded-full" style={{ background: colorOf(t.platform) }} />
@@ -72,16 +72,16 @@ export function TracePanel({ platforms }: { platforms: Platform[] }) {
                 {t.platform} · {t.name}
               </span>
               {/* eslint-disable-next-line @next/next/no-img-element -- data URL signature */}
-              <img alt="" src={t.signature} className="h-[18px] w-auto drop-shadow-[0_0_3px_rgba(47,227,255,.6)]" />
+              <img alt="" src={t.signature} className="h-[22px] w-auto drop-shadow-[0_0_3px_rgba(47,227,255,.6)]" />
             </li>
           ))}
       </ul>
-      <p className="placeholder-note -mt-2 mb-2">demo traces, real ones arrive in phase 4</p>
+      <p className="placeholder-note -mt-2 mb-2">demo traces, real ones arrive in phase 5</p>
 
       <label className="field-label" htmlFor="signature">
         signature
       </label>
-      <div className="relative h-24 border border-dashed border-holo/35 bg-[rgba(2,10,16,.7)]">
+      <div className="relative h-28 border border-dashed border-holo/35 bg-[rgba(2,10,16,.7)]">
         <canvas
           id="signature"
           ref={canvasRef}
@@ -89,7 +89,7 @@ export function TracePanel({ platforms }: { platforms: Platform[] }) {
           className="block size-full cursor-crosshair touch-none"
         />
         {!inked && (
-          <span className="pointer-events-none absolute inset-0 grid place-items-center font-mono text-xs text-[#3e6474]">
+          <span className="pointer-events-none absolute inset-0 grid place-items-center font-mono text-[14px] text-[#4f7a8c]">
             draw here
           </span>
         )}
@@ -134,13 +134,13 @@ export function TracePanel({ platforms }: { platforms: Platform[] }) {
         <button type="button" className="btn" onClick={send}>
           &gt; send_trace()
         </button>
-        <p className="font-mono text-[11px] text-muted" role="status">
+        <p className="font-mono text-[13px] text-muted" role="status">
           {message}
         </p>
       </div>
 
       {toast && (
-        <div className="fixed top-[calc(52px+env(safe-area-inset-top,0px))] left-1/2 z-[5] -translate-x-1/2 border border-holo bg-[rgba(4,14,22,.9)] px-3.5 py-2 font-mono text-xs whitespace-nowrap text-fg">
+        <div className="fixed top-[calc(52px+env(safe-area-inset-top,0px))] left-1/2 z-[5] -translate-x-1/2 border border-holo bg-[rgba(4,14,22,.9)] px-4 py-2.5 font-mono text-[13px] whitespace-nowrap text-fg">
           trace://received · your star is on the wall
         </div>
       )}

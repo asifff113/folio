@@ -27,6 +27,43 @@ export type Section = {
   enabled: boolean;
 };
 
+export type HelpKind = "need" | "offer";
+export type HelpUrgency = "low" | "medium" | "urgent";
+export type HelpStatus = "open" | "in_progress" | "solved";
+
+/** One entry in "I need help with" (need) or "I can provide" (offer). */
+export type HelpItem = {
+  id: string;
+  kind: HelpKind;
+  title: string;
+  details: string;
+  tags: string[];
+  urgency: HelpUrgency;
+  status: HelpStatus;
+  visible: boolean;
+};
+
+export type HelpSettings = {
+  /** Show the chapter at all (it also stays hidden while no item is visible). */
+  enabled: boolean;
+  heading: string;
+  intro: string;
+  /** Visitors can send notes about items. */
+  accept: boolean;
+  /** Keep solved items on the site, dimmed. */
+  showSolved: boolean;
+};
+
+/** Ways a visitor can leave their contact in a help response. */
+export const CONTACT_PLATFORMS = [
+  { id: "discord", label: "Discord", placeholder: "@username" },
+  { id: "telegram", label: "Telegram", placeholder: "@username" },
+  { id: "instagram", label: "Instagram", placeholder: "@username" },
+  { id: "email", label: "Email", placeholder: "you@example.com" },
+  { id: "other", label: "Other", placeholder: "where can I reach you?" },
+] as const;
+export type ContactPlatform = (typeof CONTACT_PLATFORMS)[number]["id"];
+
 export type SiteConfig = {
   name: string;
   handle: string;
@@ -36,6 +73,7 @@ export type SiteConfig = {
   platforms: Platform[];
   sections: Section[];
   theme: Theme;
+  help: HelpSettings & { items: HelpItem[] };
 };
 
 export const defaultSite: SiteConfig = {
@@ -75,6 +113,14 @@ export const defaultSite: SiteConfig = {
     ["contact", "Contact form"],
   ].map(([key, title]) => ({ key, title, enabled: false })),
   theme: { primary: "#2fe3ff", secondary: "#ff4fd8", scanlines: true },
+  help: {
+    enabled: true,
+    heading: "Ready to help me?",
+    intro: "Things I'm stuck on, and things I can do for you. Pick one and send me a note.",
+    accept: true,
+    showSolved: true,
+    items: [],
+  },
 };
 
 /** Visitors who arrive from somewhere not in the list pick this one. */

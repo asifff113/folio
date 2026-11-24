@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import type { ChapterKey } from "@/lib/journey/store";
 
 /** Small seeded PRNG so the particle layout is the same on every visit. */
 function mulberry32(seed: number) {
@@ -24,10 +25,15 @@ export type ParticleData = {
 };
 
 /**
- * Builds the particle shapes, in chapter order:
- * boot sphere, galaxy, double helix, tunnel, trace wall, end sphere.
+ * Builds one particle shape per chapter, in the order given:
+ * boot sphere, galaxy, double helix, tunnel, exchange (help), trace wall, end sphere.
  */
-export function buildParticles(count: number, primary: string, secondary: string): ParticleData {
+export function buildParticles(
+  count: number,
+  primary: string,
+  secondary: string,
+  chapters: readonly ChapterKey[],
+): ParticleData {
   const rnd = mulberry32(1337);
   const gauss = () => {
     let u = 0;
@@ -89,6 +95,29 @@ export function buildParticles(count: number, primary: string, secondary: string
     return [Math.cos(a) * R, Math.sin(a) * R, z];
   });
 
+  // Two orbs (what I need, what I give) joined by two counter-flowing streams.
+  const exchange = shape((i) => {
+    const z0 = -46;
+    const part = i % 5;
+    if (part < 2) {
+      const side = part === 0 ? -1 : 1;
+      const y = 1 - 2 * rnd();
+      const r = Math.sqrt(1 - y * y);
+      const th = rnd() * Math.PI * 2;
+      const R = 1.35 + gauss() * 0.05;
+      return [side * 3.4 + Math.cos(th) * r * R, y * R, z0 + Math.sin(th) * r * R];
+    }
+    if (part < 4) {
+      const t = rnd();
+      const x = -3.4 + t * 6.8;
+      const phase = part === 2 ? 0 : Math.PI;
+      const amp = Math.sin(t * Math.PI) * 0.9;
+      return [x, Math.sin(t * Math.PI * 3 + phase) * amp + gauss() * 0.03, z0 + Math.cos(t * Math.PI * 3 + phase) * amp];
+    }
+    // Loose sparks around the whole exchange.
+    return [gauss() * 3.2, gauss() * 1.4, z0 + gauss() * 1.2];
+  });
+
   const cols = 100;
   const rows = Math.ceil(count / cols);
   const wall = shape((i) => {
@@ -99,7 +128,16 @@ export function buildParticles(count: number, primary: string, secondary: string
     return [x, y, -70 + 0.35 * Math.sin(x * 0.6) * Math.cos(y * 0.5)];
   });
 
-  const shapes = [sphere(0), galaxy, helix, tunnel, wall, sphere(-70)];
+  const byChapter: Record<ChapterKey, Float32Array> = {
+    BOOT: sphere(0),
+    ABOUT: galaxy,
+    INTERESTS: helix,
+    SIGNAL: tunnel,
+    HELP: exchange,
+    TRACES: wall,
+    END: sphere(-70),
+  };
+  const shapes = chapters.map((key) => byChapter[key]);
 
   const colors = new Float32Array(count * 3);
   const seed = new Float32Array(count);

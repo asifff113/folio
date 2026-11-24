@@ -5,18 +5,22 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { otherPlatform, type Theme } from "@/config/site";
-import { LAST_CHAPTER, clamp, journey, ramp, smooth } from "@/lib/journey/store";
+import { type ChapterKey, clamp, journey, ramp, smooth } from "@/lib/journey/store";
 import { useTraces } from "@/lib/traces/store";
 import { buildParticles, glowTexture, hashRandom } from "./shapes";
 
 type SceneProps = {
   theme: Theme;
+  /** Chapters present, in scroll order. */
+  chapters: ChapterKey[];
   /** Platform id → color, for the trace stars. */
   traceColors: Record<string, string>;
 };
 
 /** The whole WebGL world. Every part reads `journey.current` each frame. */
-export default function Scene({ theme, traceColors }: SceneProps) {
+export default function Scene({ theme, traceColors, chapters }: SceneProps) {
+  const last = chapters.length - 1;
+  const at = (key: ChapterKey) => chapters.indexOf(key);
   return (
     <Canvas
       dpr={[1, 2]}
@@ -30,12 +34,12 @@ export default function Scene({ theme, traceColors }: SceneProps) {
     >
       <color attach="background" args={["#05070c"]} />
       <fogExp2 attach="fog" args={["#05070c", 0.028]} />
-      <CameraRig />
-      <Particles primary={theme.primary} secondary={theme.secondary} />
-      <Hologram primary={theme.primary} secondary={theme.secondary} />
+      <CameraRig chapters={chapters} />
+      <Particles primary={theme.primary} secondary={theme.secondary} chapters={chapters} />
+      <Hologram primary={theme.primary} secondary={theme.secondary} signal={at("SIGNAL")} last={last} />
       <GridFloor primary={theme.primary} />
-      <TunnelRings primary={theme.primary} />
-      <TraceStars colors={traceColors} />
+      <TunnelRings primary={theme.primary} signal={at("SIGNAL")} />
+      <TraceStars colors={traceColors} traces={at("TRACES")} />
       <EffectComposer>
         <Bloom mipmapBlur intensity={0.55} luminanceThreshold={0.25} luminanceSmoothing={0.3} />
       </EffectComposer>
@@ -46,21 +50,29 @@ export default function Scene({ theme, traceColors }: SceneProps) {
 /* ---------- camera: one keyframe per chapter ---------- */
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
-const CAMERA_PATH = new THREE.CatmullRomCurve3(
-  [V(0, 0.4, 9.5), V(0, 8.5, 6), V(6, 0.6, 5.5), V(0, 0, -20), V(0, 0, -55.5), V(0, 1, -61.5)],
-  false,
-  "centripetal",
-);
-const LOOK_PATH = new THREE.CatmullRomCurve3(
-  [V(0, 0, 0), V(0, 0, 0), V(0, 0, 0), V(0, 0, -60), V(0, 0, -70), V(0, 0, -70)],
-  false,
-  "centripetal",
-);
+/** Where the camera sits and what it looks at, per chapter. */
+const KEYFRAMES: Record<ChapterKey, { pos: THREE.Vector3; look: THREE.Vector3 }> = {
+  BOOT: { pos: V(0, 0.4, 9.5), look: V(0, 0, 0) },
+  ABOUT: { pos: V(0, 8.5, 6), look: V(0, 0, 0) },
+  INTERESTS: { pos: V(6, 0.6, 5.5), look: V(0, 0, 0) },
+  SIGNAL: { pos: V(0, 0, -20), look: V(0, 0, -60) },
+  HELP: { pos: V(0, 0.8, -36.5), look: V(0, 0, -46) },
+  TRACES: { pos: V(0, 0, -55.5), look: V(0, 0, -70) },
+  END: { pos: V(0, 1, -61.5), look: V(0, 0, -70) },
+};
 
-function CameraRig() {
+function CameraRig({ chapters }: { chapters: ChapterKey[] }) {
   const width = useThree((s) => s.size.width);
   const pos = useMemo(() => new THREE.Vector3(), []);
   const look = useMemo(() => new THREE.Vector3(), []);
+  const paths = useMemo(
+    () => ({
+      camera: new THREE.CatmullRomCurve3(chapters.map((k) => KEYFRAMES[k].pos), false, "centripetal"),
+      look: new THREE.CatmullRomCurve3(chapters.map((k) => KEYFRAMES[k].look), false, "centripetal"),
+    }),
+    [chapters],
+  );
+  const last = chapters.length - 1;
 
   useFrame(({ camera }) => {
     const cam = camera as THREE.PerspectiveCamera;
@@ -69,11 +81,11 @@ function CameraRig() {
       cam.fov = fov;
       cam.updateProjectionMatrix();
     }
-    const s = clamp(journey.current, 0, LAST_CHAPTER);
-    const k = Math.min(LAST_CHAPTER - 1, Math.floor(s));
-    const u = (k + smooth(s - k)) / LAST_CHAPTER;
-    CAMERA_PATH.getPoint(u, pos);
-    LOOK_PATH.getPoint(u, look);
+    const s = clamp(journey.current, 0, last);
+    const k = Math.min(last - 1, Math.floor(s));
+    const u = (k + smooth(s - k)) / last;
+    paths.camera.getPoint(u, pos);
+    paths.look.getPoint(u, look);
     const p = journey.pointer;
     cam.position.set(pos.x + p.x * 1.2, pos.y + p.y * 0.8, pos.z);
     cam.lookAt(look);
@@ -86,19 +98,20 @@ function CameraRig() {
 
 type Colors = { primary: string; secondary: string };
 
-function Particles({ primary, secondary }: Colors) {
+function Particles({ primary, secondary, chapters }: Colors & { chapters: ChapterKey[] }) {
   const data = useMemo(
-    () => buildParticles(window.innerWidth < 720 ? 3200 : 5000, primary, secondary),
-    [primary, secondary],
+    () => buildParticles(window.innerWidth < 720 ? 3200 : 5000, primary, secondary, chapters),
+    [primary, secondary, chapters],
   );
+  const last = chapters.length - 1;
   const points = useRef<THREE.Points>(null);
 
   useFrame(({ clock }) => {
     const obj = points.current;
     if (!obj) return;
     const t = clock.elapsedTime;
-    const s = clamp(journey.current, 0, LAST_CHAPTER);
-    const k = Math.min(LAST_CHAPTER - 1, Math.floor(s));
+    const s = clamp(journey.current, 0, last);
+    const k = Math.min(last - 1, Math.floor(s));
     const f = s - k;
     const A = data.shapes[k];
     const B = data.shapes[k + 1];
@@ -143,7 +156,7 @@ function Particles({ primary, secondary }: Colors) {
 
 /* ---------- hologram: wireframe core at boot and end ---------- */
 
-function Hologram({ primary, secondary }: Colors) {
+function Hologram({ primary, secondary, signal, last }: Colors & { signal: number; last: number }) {
   const group = useRef<THREE.Group>(null);
   const shell = useRef<THREE.LineSegments>(null);
   const icoMat = useRef<THREE.MeshBasicMaterial>(null);
@@ -155,9 +168,9 @@ function Hologram({ primary, secondary }: Colors) {
     if (!g || !icoMat.current || !dodMat.current || !shell.current) return;
     const t = clock.elapsedTime;
     const s = journey.current;
-    const visible = Math.max(1 - s * 2.2, ramp(s, 4.45, 0.55));
+    const visible = Math.max(1 - s * 2.2, ramp(s, last - 0.55, 0.55));
     g.visible = visible > 0.01;
-    g.position.z = s < 2.5 ? 0 : -70;
+    g.position.z = s < signal - 0.5 ? 0 : -70;
     icoMat.current.opacity = 0.8 * visible;
     dodMat.current.opacity = 0.45 * visible;
     g.rotation.y += dt * 0.45;
@@ -204,7 +217,7 @@ function GridFloor({ primary }: { primary: string }) {
 
 const RING_COUNT = 34;
 
-function TunnelRings({ primary }: { primary: string }) {
+function TunnelRings({ primary, signal }: { primary: string; signal: number }) {
   const ringGeometry = useMemo(() => {
     const pts: THREE.Vector3[] = [];
     for (let k = 0; k < 64; k++) {
@@ -219,7 +232,7 @@ function TunnelRings({ primary }: { primary: string }) {
     if (!group.current) return;
     const t = clock.elapsedTime;
     const s = journey.current;
-    const visible = ramp(s, 2.4, 0.6) * (1 - ramp(s, 3.55, 0.5));
+    const visible = ramp(s, signal - 0.6, 0.6) * (1 - ramp(s, signal + 0.55, 0.5));
     group.current.visible = visible > 0.01;
     group.current.children.forEach((child, j) => {
       const ring = child as THREE.LineLoop<THREE.BufferGeometry, THREE.LineBasicMaterial>;
@@ -242,7 +255,7 @@ function TunnelRings({ primary }: { primary: string }) {
 
 /* ---------- traces: one glowing star per visitor on the wall ---------- */
 
-function TraceStars({ colors }: { colors: Record<string, string> }) {
+function TraceStars({ colors, traces: chapter }: { colors: Record<string, string>; traces: number }) {
   const traces = useTraces();
   const group = useRef<THREE.Group>(null);
 
@@ -266,7 +279,7 @@ function TraceStars({ colors }: { colors: Record<string, string> }) {
     if (!group.current) return;
     const t = clock.elapsedTime;
     const s = journey.current;
-    const wall = ramp(s, 3.35, 0.55) * (1 - ramp(s, 4.45, 0.4));
+    const wall = ramp(s, chapter - 0.65, 0.55) * (1 - ramp(s, chapter + 0.45, 0.4));
     const now = Date.now();
     group.current.children.forEach((child, i) => {
       const star = stars[i];

@@ -23,10 +23,10 @@ Open http://localhost:3000. Without a database the site runs on placeholder cont
 
 ## Admin panel
 
-The admin panel lives at `/admin`. It edits the profile, links, optional sections and theme, and saves to Supabase.
+The admin panel lives at `/admin`. It edits the profile, links, optional sections, theme and the "Ready to help me?" chapter, has an inbox for notes from visitors, and saves to Supabase.
 
 1. Create a free project at [supabase.com](https://supabase.com).
-2. In the project's SQL Editor, run [`supabase/schema.sql`](supabase/schema.sql). It creates the tables, the access rules (anyone can read, only admins can write) and placeholder content.
+2. In the project's SQL Editor, run [`supabase/schema.sql`](supabase/schema.sql), then [`supabase/phase4_help.sql`](supabase/phase4_help.sql). They create the tables, the access rules (anyone can read, only admins can write; only admins can read the inbox) and placeholder content.
 3. Copy `.env.example` to `.env.local` and fill in the project URL and publishable key (Project Settings → API Keys).
 4. In Authentication → Users, add your user with a password. Then turn off new sign-ups (Authentication → Sign In / Providers), so nobody else can create an account.
 5. Run the last statement in `schema.sql` with your email to make that user an admin.
@@ -41,6 +41,8 @@ Saving in the admin panel refreshes the public site right away.
 | 1 | Project setup, design tokens, HUD shell | done |
 | 2 | Scroll-driven 3D journey (boot, about, interests, signal, traces, end) | done |
 | 3 | Supabase, admin login, profile / links / sections / theme editors | done |
-| 4 | Trace system: signature pad, platform detection, live log, moderation | next |
-| 5 | Optional sections, each one a new chapter of the journey | planned |
-| 6 | SEO, share image, performance, deploy | planned |
+| 4 | "Ready to help me?" chapter (needs and offers), visitor notes, admin inbox, larger readable panels | done |
+| 5 | Trace system: saved signatures, platform detection, live log, moderation | next |
+| 6 | Section builder plus editors for the optional sections, image uploads | planned |
+| 7 | Customization: fonts, glow, HUD, 3D shapes and motion, chapter text, intro, sound, maintenance mode | planned |
+| 8 | SEO, share image, performance, deploy | planned |

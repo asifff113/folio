@@ -22,7 +22,7 @@ export function BootLog({ platformCount }: { platformCount: number }) {
   }, []);
 
   return (
-    <p className="mb-3.5 min-h-[7.2em] font-mono text-xs leading-[1.8] text-[#8fd8ea]">
+    <p className="mb-4 min-h-[7.2em] font-mono text-[14px] leading-[1.8] text-[#9fe2f2]">
       {lines.slice(0, shown).map(([label, status]) => (
         <span key={label} className="block">
           &gt; {label} {".".repeat(Math.max(3, 22 - label.length))} <span className="text-holo">{status}</span>

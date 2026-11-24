@@ -137,14 +137,18 @@ body {
 
   /* ---------- chapter panels ---------- */
 
+  /* Panels are sized for reading: wide, large type, strong contrast. */
   .panel {
     position: relative;
     width: 100%;
-    max-width: 420px;
-    padding: 22px 22px 24px;
-    background: var(--panel);
-    border: 1px solid var(--holo-dim);
-    backdrop-filter: blur(6px);
+    max-width: 600px;
+    padding: 30px 32px 32px;
+    background: rgba(4, 14, 22, 0.78);
+    border: 1px solid color-mix(in srgb, var(--holo) 28%, transparent);
+    backdrop-filter: blur(8px);
+  }
+  .panel-wide {
+    max-width: 1120px;
   }
   .panel::before,
   .panel::after {
@@ -157,29 +161,31 @@ body {
   .panel::before { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; }
   .panel::after { bottom: -1px; right: -1px; border-bottom-width: 2px; border-right-width: 2px; }
   @media (max-width: 720px) {
-    .panel { max-width: none; }
+    .panel { max-width: none; padding: 24px 20px 26px; }
   }
 
   .eyebrow {
-    margin-bottom: 10px;
-    font: 500 11px var(--font-mono);
+    margin-bottom: 12px;
+    font: 500 12px var(--font-mono);
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--holo);
   }
 
   .panel-title {
-    margin-bottom: 10px;
+    margin-bottom: 14px;
     font-family: var(--font-display);
     font-weight: 600;
-    font-size: clamp(20px, 2.6vw, 28px);
-    line-height: 1.2;
+    font-size: clamp(26px, 3.2vw, 40px);
+    line-height: 1.15;
     text-wrap: balance;
   }
 
   .panel-text {
-    margin-bottom: 10px;
-    color: var(--muted);
+    margin-bottom: 12px;
+    font-size: 17px;
+    line-height: 1.65;
+    color: color-mix(in srgb, var(--fg) 82%, var(--muted));
   }
 
   .placeholder-note {
@@ -213,8 +219,8 @@ body {
 
   .field-label {
     display: block;
-    margin: 12px 0 6px;
-    font: 500 10px var(--font-mono);
+    margin: 16px 0 7px;
+    font: 700 11px var(--font-mono);
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--holo);
@@ -222,19 +228,25 @@ body {
 
   .text-input {
     width: 100%;
-    padding: 9px 10px;
-    font: 13px var(--font-mono);
+    min-height: 44px;
+    padding: 10px 13px;
+    font: 15px var(--font-mono);
     color: var(--fg);
-    background: rgba(2, 10, 16, 0.7);
-    border: 1px solid var(--holo-dim);
+    background: rgba(2, 10, 16, 0.8);
+    border: 1px solid color-mix(in srgb, var(--holo) 32%, transparent);
+  }
+  textarea.text-input {
+    font-family: var(--font-sans);
+    font-size: 16px;
   }
 
   .chip {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 5px 9px;
-    font: 11px var(--font-mono);
+    gap: 7px;
+    min-height: 36px;
+    padding: 6px 12px;
+    font: 13px var(--font-mono);
     color: var(--fg);
     background: transparent;
     border: 1px solid var(--holo-dim);
@@ -245,14 +257,16 @@ body {
     height: 7px;
     border-radius: 50%;
   }
-  .chip[aria-pressed="true"] {
+  .chip[aria-pressed="true"],
+  .chip[aria-checked="true"] {
     border-color: var(--holo);
     background: color-mix(in srgb, var(--holo) 14%, transparent);
   }
 
   .btn {
-    padding: 10px 16px;
-    font: 500 13px var(--font-mono);
+    min-height: 44px;
+    padding: 10px 18px;
+    font: 700 14px var(--font-mono);
     color: var(--holo);
     background: color-mix(in srgb, var(--holo) 8%, transparent);
     border: 1px solid var(--holo);
@@ -261,10 +275,18 @@ body {
   .btn:hover {
     background: color-mix(in srgb, var(--holo) 20%, transparent);
   }
+  .btn-solid {
+    color: #02141b;
+    background: var(--holo);
+    letter-spacing: 0.08em;
+  }
+  .btn-solid:hover {
+    background: color-mix(in srgb, var(--holo) 80%, white);
+  }
 
   .ghost-btn {
-    padding: 3px 8px;
-    font: 10px var(--font-mono);
+    padding: 5px 10px;
+    font: 12px var(--font-mono);
     color: var(--muted);
     background: transparent;
     border: 1px solid var(--holo-dim);

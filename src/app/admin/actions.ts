@@ -1,10 +1,10 @@
 "use server";
 
-import { updateTag } from "next/cache";
+import { refresh, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { SITE_TAG } from "@/lib/content";
 import { getAdminSession } from "@/lib/admin/session";
-import { parsePlatforms, parseProfile, parseSections, parseTheme } from "@/lib/admin/validate";
+import { parseHelp, parsePlatforms, parseProfile, parseSections, parseTheme } from "@/lib/admin/validate";
 import { createAuthClient } from "@/lib/supabase/clients";
 
 export type FormState = { ok: boolean; message: string; at: number } | null;
@@ -105,4 +105,65 @@ export async function saveTheme(_prev: FormState, form: FormData): Promise<FormS
       .upsert({ id: 1, theme: parsed.data, updated_at: new Date().toISOString() });
     return error ? `Could not save: ${error.message}` : null;
   });
+}
+
+export async function saveHelp(_prev: FormState, form: FormData): Promise<FormState> {
+  const parsed = parseHelp(form);
+  if (!parsed.ok) return fail(parsed.error);
+  const { settings, items } = parsed.data;
+
+  return asAdmin(async (supabase) => {
+    const profile = await supabase
+      .from("profile")
+      .upsert({ id: 1, help: settings, updated_at: new Date().toISOString() });
+    if (profile.error) return `Could not save: ${profile.error.message}`;
+
+    const rows = items.map((item, sort) => ({ ...item, sort }));
+    if (rows.length) {
+      const { error } = await supabase.from("help_items").upsert(rows);
+      if (error) return `Could not save the items: ${error.message}`;
+    }
+    // Remove items deleted in the editor. Ids are validated UUIDs.
+    const keep = rows.map((r) => r.id);
+    const remove = supabase.from("help_items").delete();
+    const { error } = keep.length
+      ? await remove.not("id", "in", `(${keep.join(",")})`)
+      : await remove.not("id", "is", null);
+    return error ? `Could not remove deleted items: ${error.message}` : null;
+  });
+}
+
+/* ---------- inbox ---------- */
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Runs an inbox change as the admin and refreshes the admin pages (unread badge included). */
+async function inboxChange(id: string, change: (supabase: AdminClient) => PromiseLike<{ error: { message: string } | null }>) {
+  if (!UUID.test(id)) return;
+  const session = await getAdminSession();
+  if (session.state !== "admin") return;
+  const { error } = await change(session.supabase);
+  if (error) console.error("[inbox] change failed:", error.message);
+  refresh();
+}
+
+type AdminClient = NonNullable<Awaited<ReturnType<typeof createAuthClient>>>;
+
+export async function setMessageRead(id: string, isRead: boolean) {
+  await inboxChange(id, (db) => db.from("inbox").update({ is_read: isRead }).eq("id", id));
+}
+
+export async function setMessageArchived(id: string, archived: boolean) {
+  await inboxChange(id, (db) => db.from("inbox").update({ archived, is_read: true }).eq("id", id));
+}
+
+export async function deleteMessage(id: string) {
+  await inboxChange(id, (db) => db.from("inbox").delete().eq("id", id));
+}
+
+/** Sets a help item's status from the inbox ("mark in progress", "mark solved"). */
+export async function setItemStatus(itemId: string, status: "open" | "in_progress" | "solved") {
+  if (!["open", "in_progress", "solved"].includes(status)) return;
+  await inboxChange(itemId, (db) => db.from("help_items").update({ status }).eq("id", itemId));
+  updateTag(SITE_TAG);
 }

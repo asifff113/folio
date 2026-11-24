@@ -1,5 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 
@@ -32,6 +33,9 @@ export async function createAuthClient() {
   const env = supabaseEnv();
   if (!env) return null;
   const cookieStore = await cookies();
+  // The auth client checks token expiry against the clock, so it must only
+  // run at request time, never while Next prerenders the page.
+  await connection();
   return createServerClient(env.url, env.key, {
     cookies: {
       getAll: () => cookieStore.getAll(),
