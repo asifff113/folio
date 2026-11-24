@@ -26,8 +26,8 @@ Open http://localhost:3000.
 | Phase | Scope | Status |
 |---|---|---|
 | 1 | Project setup, design tokens, HUD shell | done |
-| 2 | Scroll-driven 3D journey (boot, about, interests, signal, traces, end) | next |
-| 3 | Supabase, admin login, profile / links / sections editors | planned |
+| 2 | Scroll-driven 3D journey (boot, about, interests, signal, traces, end) | done |
+| 3 | Supabase, admin login, profile / links / sections editors | next |
 | 4 | Trace system: signature pad, platform detection, live log, moderation | planned |
 | 5 | Optional sections, each one a new chapter of the journey | planned |
 | 6 | SEO, share image, performance, deploy | planned |

@@ -1,36 +1,112 @@
-import { defaultSite } from "@/config/site";
+import { defaultSite, optionalSections, otherPlatform } from "@/config/site";
+import { BackToTop } from "@/components/chapters/BackToTop";
+import { BootLog } from "@/components/chapters/BootLog";
+import { Chapter, Panel } from "@/components/chapters/Chapter";
+import { TracePanel } from "@/components/chapters/TracePanel";
+import { Hud } from "@/components/hud/Hud";
+import { JourneyCanvas } from "@/components/journey/JourneyCanvas";
+import { ScrollDriver } from "@/components/journey/ScrollDriver";
 
 /**
- * Phase 1 placeholder: the HUD shell only.
- * Phase 2 replaces the middle with the scroll-driven 3D journey.
+ * The scroll-driven 3D journey: one fixed WebGL world behind six chapters.
+ * Scrolling between chapters morphs the particles and moves the camera.
  */
 export default function Home() {
   const site = defaultSite;
+  const platforms = site.platforms.filter((p) => p.visible);
 
   return (
-    <main className="relative min-h-screen overflow-hidden">
-      <div className="pointer-events-none fixed inset-3 border border-holo-dim">
-        <div className="absolute inset-x-5 top-3 flex justify-between font-mono text-[11px] tracking-[0.14em] text-holo">
-          <span>SYS://{site.handle.toUpperCase()}</span>
-          <span>
-            <span className="blink">●</span> BOOTING
-          </span>
-        </div>
-      </div>
+    <>
+      <ScrollDriver />
+      <JourneyCanvas />
+      <Hud handle={site.handle} />
 
-      <section className="flex min-h-screen flex-col justify-end px-7 pb-[12vh]">
-        <p className="mb-4 font-mono text-xs leading-7 text-holo">
-          &gt; init hologram ......... pending
-          <br />
-          &gt; 3D journey ............ phase 2
-        </p>
-        <h1 className="glitch font-display text-[clamp(56px,10vw,128px)] font-extrabold leading-[0.9] tracking-tight text-[#dffaff]">
-          {site.name}
-        </h1>
-        <p className="mt-3 font-mono text-[13px] text-muted">{"// "}{site.tagline}</p>
-      </section>
+      <main className="relative z-[3]">
+        <Chapter index={0} align="boot">
+          <div>
+            <BootLog platformCount={platforms.length} />
+            <h1 className="glitch font-display text-[clamp(56px,10vw,128px)] leading-[0.9] font-extrabold tracking-[-0.03em] text-[#dffaff]">
+              {site.name}
+            </h1>
+            <p className="mt-3 mb-[22px] font-mono text-[13px] text-[#8fcfe0]">
+              {"// "}
+              {site.tagline}
+            </p>
+            <p className="scroll-cue">
+              <i />
+              SCROLL TO ENTER
+            </p>
+          </div>
+        </Chapter>
 
-      <div className="hud-scanlines" aria-hidden="true" />
-    </main>
+        <Chapter index={1}>
+          <Panel eyebrow="// about">
+            <h2 className="panel-title">{site.about.heading}</h2>
+            <p className="panel-text">{site.about.body}</p>
+          </Panel>
+        </Chapter>
+
+        <Chapter index={2} align="right">
+          <Panel eyebrow="// interests">
+            <h2 className="panel-title">{site.interests.heading}</h2>
+            <ul className="mt-1.5 flex flex-wrap gap-2">
+              {site.interests.tags.map((tag) => (
+                <li key={tag} className="border border-holo-dim bg-holo/5 px-2.5 py-[5px] font-mono text-xs">
+                  {tag}
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        </Chapter>
+
+        <Chapter index={3}>
+          <Panel eyebrow="// signal">
+            <h2 className="panel-title">Find me on.</h2>
+            <ul className="mt-1.5">
+              {platforms.map((p) => (
+                <li key={p.id} className="flex items-baseline gap-2.5 py-[7px] font-mono text-[13px] text-[#bfefff]">
+                  <i className="size-[7px] flex-none self-center rounded-full" style={{ background: p.color }} />
+                  <span>{p.label.toLowerCase()}</span>
+                  <span className="flex-1 border-b border-dotted border-holo/35" />
+                  {p.url ? (
+                    <a className="text-holo hover:underline" href={p.url} target="_blank" rel="noopener noreferrer">
+                      connect ↗
+                    </a>
+                  ) : (
+                    <span className="text-muted">not set</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        </Chapter>
+
+        <Chapter index={4} align="right">
+          <TracePanel platforms={[...platforms, otherPlatform]} />
+        </Chapter>
+
+        <Chapter index={5}>
+          <Panel eyebrow="// end of transmission">
+            <h2 className="panel-title">More chapters plug in here.</h2>
+            <p className="panel-text">
+              Every section switched on in the admin panel becomes its own chapter in this journey, with its own shape
+              and camera move.
+            </p>
+            <ul className="mt-1.5 mb-4 grid grid-cols-2 gap-x-4 gap-y-1 max-[720px]:grid-cols-1">
+              {optionalSections.map((name) => (
+                <li
+                  key={name}
+                  className="flex justify-between gap-2 border-b border-holo/10 py-1 font-mono text-xs text-[#8fb8c8]"
+                >
+                  {name}
+                  <span className="text-[10px] tracking-widest text-[#ff7ad9]">OFFLINE</span>
+                </li>
+              ))}
+            </ul>
+            <BackToTop />
+          </Panel>
+        </Chapter>
+      </main>
+    </>
   );
 }
