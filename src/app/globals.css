@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+/*
+ * Holographic Terminal design tokens.
+ * The site has one deliberate dark look; every color comes from these tokens.
+ */
+:root {
+  color-scheme: dark;
+  --void: #05070c;
+  --fg: #e4f6ff;
+  --muted: #7fa6b8;
+  --holo: #2fe3ff;
+  --holo-dim: rgba(47, 227, 255, 0.2);
+  --pink: #ff4fd8;
+  --panel: rgba(4, 14, 22, 0.62);
+}
+
+@theme inline {
+  --color-void: var(--void);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-holo: var(--holo);
+  --color-holo-dim: var(--holo-dim);
+  --color-pink: var(--pink);
+  --color-panel: var(--panel);
+  --font-display: var(--font-unbounded), "Segoe UI", system-ui, sans-serif;
+  --font-sans: var(--font-manrope), "Segoe UI", system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+
+html,
+body {
+  background: var(--void);
+  color: var(--fg);
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+/* Scanlines and vignette over the whole viewport. */
+.hud-scanlines {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.6)),
+    repeating-linear-gradient(to bottom, rgba(47, 227, 255, 0.04) 0 1px, transparent 1px 3px);
+}
+
+.glitch {
+  text-shadow: 3px 0 var(--pink), -3px 0 var(--holo);
+  animation: glitch 3.4s infinite;
+}
+
+@keyframes glitch {
+  0%, 92%, 100% { transform: none; }
+  93% { transform: translateX(4px) skewX(-8deg); text-shadow: -5px 0 var(--pink), 5px 0 var(--holo); }
+  95% { transform: translateX(-3px); clip-path: inset(30% 0 40% 0); }
+  97% { transform: none; clip-path: none; }
+}
+
+@keyframes blink {
+  50% { opacity: 0.25; }
+}
+
+.blink {
+  animation: blink 1.4s steps(2) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glitch,
+  .blink {
+    animation: none;
+  }
+}
