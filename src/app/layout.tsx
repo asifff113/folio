@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, Manrope, Unbounded } from "next/font/google";
-import { defaultSite } from "@/config/site";
+import { getSiteContent } from "@/lib/content";
 import "./globals.css";
 
 const unbounded = Unbounded({
@@ -19,10 +19,10 @@ const jetbrains = JetBrains_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: defaultSite.name,
-  description: defaultSite.tagline,
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getSiteContent();
+  return { title: site.name, description: site.tagline };
+}
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

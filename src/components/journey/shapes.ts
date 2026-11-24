@@ -27,7 +27,7 @@ export type ParticleData = {
  * Builds the particle shapes, in chapter order:
  * boot sphere, galaxy, double helix, tunnel, trace wall, end sphere.
  */
-export function buildParticles(count: number): ParticleData {
+export function buildParticles(count: number, primary: string, secondary: string): ParticleData {
   const rnd = mulberry32(1337);
   const gauss = () => {
     let u = 0;
@@ -104,12 +104,12 @@ export function buildParticles(count: number): ParticleData {
   const colors = new Float32Array(count * 3);
   const seed = new Float32Array(count);
   const dir = new Float32Array(count * 3);
-  const cyan = new THREE.Color("#2fe3ff");
-  const pink = new THREE.Color("#ff4fd8");
-  const ice = new THREE.Color("#bfe9ff");
+  const main = new THREE.Color(primary);
+  const accent = new THREE.Color(secondary);
+  const pale = main.clone().lerp(new THREE.Color("#ffffff"), 0.65);
   for (let i = 0; i < count; i++) {
     seed[i] = rnd();
-    const c = seed[i] < 0.12 ? pink : seed[i] < 0.3 ? ice : cyan;
+    const c = seed[i] < 0.12 ? accent : seed[i] < 0.3 ? pale : main;
     colors[i * 3] = c.r;
     colors[i * 3 + 1] = c.g;
     colors[i * 3 + 2] = c.b;

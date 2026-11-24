@@ -6,7 +6,7 @@ import { CHAPTERS, LAST_CHAPTER, onJourneyFrame } from "@/lib/journey/store";
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /** Fixed overlay: frame, live clock, current chapter and the progress rail. */
-export function Hud({ handle }: { handle: string }) {
+export function Hud({ handle, scanlines }: { handle: string; scanlines: boolean }) {
   const [chapter, setChapter] = useState(0);
   const fill = useRef<HTMLElement>(null);
   const clock = useRef<HTMLSpanElement>(null);
@@ -29,7 +29,7 @@ export function Hud({ handle }: { handle: string }) {
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[2]" aria-hidden="true">
-      <div className="hud-scanlines" />
+      {scanlines ? <div className="hud-scanlines" /> : <div className="hud-vignette" />}
       <div className="hud-frame">
         <span className="hud-corner tl" />
         <span className="hud-corner tr" />

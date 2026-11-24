@@ -1,9 +1,9 @@
 /**
  * Default site content.
  *
- * These are placeholders only. From Phase 3 on, every value here is edited in
- * the admin panel and stored in the database; this file stays as the fallback
- * used before anything has been saved.
+ * These are placeholders only. Every value here is edited in the admin panel
+ * and stored in Supabase; this file is the fallback used when Supabase is not
+ * set up yet or cannot be reached.
  */
 export type Platform = {
   id: string;
@@ -13,6 +13,20 @@ export type Platform = {
   visible: boolean;
 };
 
+export type Theme = {
+  /** Main hologram color (HUD, links, most particles). */
+  primary: string;
+  /** Accent color (glitch edges, some particles, the outer shell). */
+  secondary: string;
+  scanlines: boolean;
+};
+
+export type Section = {
+  key: string;
+  title: string;
+  enabled: boolean;
+};
+
 export type SiteConfig = {
   name: string;
   handle: string;
@@ -20,6 +34,8 @@ export type SiteConfig = {
   about: { heading: string; body: string };
   interests: { heading: string; tags: string[] };
   platforms: Platform[];
+  sections: Section[];
+  theme: Theme;
 };
 
 export const defaultSite: SiteConfig = {
@@ -42,6 +58,23 @@ export const defaultSite: SiteConfig = {
     { id: "linkedin", label: "LinkedIn", url: "", color: "#3d8fe0", visible: true },
     { id: "x", label: "X", url: "", color: "#f2f2f2", visible: true },
   ],
+  sections: [
+    ["now", "Now"],
+    ["skills", "Skills"],
+    ["projects", "Projects"],
+    ["research", "Research papers"],
+    ["gallery", "Gallery"],
+    ["certificates", "Certificates"],
+    ["experience", "Experience"],
+    ["education", "Education"],
+    ["achievements", "Achievements"],
+    ["blog", "Blog"],
+    ["testimonials", "Testimonials"],
+    ["resume", "Resume"],
+    ["music", "Music"],
+    ["contact", "Contact form"],
+  ].map(([key, title]) => ({ key, title, enabled: false })),
+  theme: { primary: "#2fe3ff", secondary: "#ff4fd8", scanlines: true },
 };
 
 /** Visitors who arrive from somewhere not in the list pick this one. */
@@ -52,6 +85,3 @@ export const otherPlatform: Platform = {
   color: "#a58bff",
   visible: true,
 };
-
-/** Optional sections that become new chapters once switched on (Phase 5). */
-export const optionalSections = ["skills", "projects", "research", "gallery", "certificates", "blog"];

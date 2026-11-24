@@ -1,16 +1,22 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import * as THREE from "three";
-import { defaultSite, otherPlatform } from "@/config/site";
+import { otherPlatform, type Theme } from "@/config/site";
 import { LAST_CHAPTER, clamp, journey, ramp, smooth } from "@/lib/journey/store";
 import { useTraces } from "@/lib/traces/store";
 import { buildParticles, glowTexture, hashRandom } from "./shapes";
 
+type SceneProps = {
+  theme: Theme;
+  /** Platform id → color, for the trace stars. */
+  traceColors: Record<string, string>;
+};
+
 /** The whole WebGL world. Every part reads `journey.current` each frame. */
-export default function Scene() {
+export default function Scene({ theme, traceColors }: SceneProps) {
   return (
     <Canvas
       dpr={[1, 2]}
@@ -25,11 +31,11 @@ export default function Scene() {
       <color attach="background" args={["#05070c"]} />
       <fogExp2 attach="fog" args={["#05070c", 0.028]} />
       <CameraRig />
-      <Particles />
-      <Hologram />
-      <GridFloor />
-      <TunnelRings />
-      <TraceStars />
+      <Particles primary={theme.primary} secondary={theme.secondary} />
+      <Hologram primary={theme.primary} secondary={theme.secondary} />
+      <GridFloor primary={theme.primary} />
+      <TunnelRings primary={theme.primary} />
+      <TraceStars colors={traceColors} />
       <EffectComposer>
         <Bloom mipmapBlur intensity={0.55} luminanceThreshold={0.25} luminanceSmoothing={0.3} />
       </EffectComposer>
@@ -78,8 +84,13 @@ function CameraRig() {
 
 /* ---------- particles: morph between chapter shapes ---------- */
 
-function Particles() {
-  const [data] = useState(() => buildParticles(window.innerWidth < 720 ? 3200 : 5000));
+type Colors = { primary: string; secondary: string };
+
+function Particles({ primary, secondary }: Colors) {
+  const data = useMemo(
+    () => buildParticles(window.innerWidth < 720 ? 3200 : 5000, primary, secondary),
+    [primary, secondary],
+  );
   const points = useRef<THREE.Points>(null);
 
   useFrame(({ clock }) => {
@@ -132,7 +143,7 @@ function Particles() {
 
 /* ---------- hologram: wireframe core at boot and end ---------- */
 
-function Hologram() {
+function Hologram({ primary, secondary }: Colors) {
   const group = useRef<THREE.Group>(null);
   const shell = useRef<THREE.LineSegments>(null);
   const icoMat = useRef<THREE.MeshBasicMaterial>(null);
@@ -161,10 +172,10 @@ function Hologram() {
     <group ref={group}>
       <mesh>
         <icosahedronGeometry args={[1.6, 1]} />
-        <meshBasicMaterial ref={icoMat} color="#2fe3ff" wireframe transparent opacity={0.8} depthWrite={false} />
+        <meshBasicMaterial ref={icoMat} color={primary} wireframe transparent opacity={0.8} depthWrite={false} />
       </mesh>
       <lineSegments ref={shell} geometry={edges}>
-        <lineBasicMaterial ref={dodMat} color="#ff4fd8" transparent opacity={0.45} depthWrite={false} />
+        <lineBasicMaterial ref={dodMat} color={secondary} transparent opacity={0.45} depthWrite={false} />
       </lineSegments>
     </group>
   );
@@ -172,14 +183,15 @@ function Hologram() {
 
 /* ---------- grid floor ---------- */
 
-function GridFloor() {
+function GridFloor({ primary }: { primary: string }) {
   const grid = useMemo(() => {
-    const g = new THREE.GridHelper(240, 120, 0x2fe3ff, 0x123246);
+    const lines = new THREE.Color(primary).multiplyScalar(0.22);
+    const g = new THREE.GridHelper(240, 120, primary, lines);
     const mat = g.material as THREE.Material;
     mat.transparent = true;
     mat.opacity = 0.45;
     return g;
-  }, []);
+  }, [primary]);
 
   useFrame(({ clock }) => {
     grid.position.set(0, -5.5, -40 + ((clock.elapsedTime * 0.8) % 2));
@@ -192,7 +204,7 @@ function GridFloor() {
 
 const RING_COUNT = 34;
 
-function TunnelRings() {
+function TunnelRings({ primary }: { primary: string }) {
   const ringGeometry = useMemo(() => {
     const pts: THREE.Vector3[] = [];
     for (let k = 0; k < 64; k++) {
@@ -221,7 +233,7 @@ function TunnelRings() {
     <group ref={group}>
       {Array.from({ length: RING_COUNT }, (_, j) => (
         <lineLoop key={j} geometry={ringGeometry} position={[0, 0, 2 - j * 2]}>
-          <lineBasicMaterial color="#2fe3ff" transparent opacity={0} depthWrite={false} />
+          <lineBasicMaterial color={primary} transparent opacity={0} depthWrite={false} />
         </lineLoop>
       ))}
     </group>
@@ -230,10 +242,7 @@ function TunnelRings() {
 
 /* ---------- traces: one glowing star per visitor on the wall ---------- */
 
-const platformColor = (id: string) =>
-  [...defaultSite.platforms, otherPlatform].find((p) => p.id === id)?.color ?? otherPlatform.color;
-
-function TraceStars() {
+function TraceStars({ colors }: { colors: Record<string, string> }) {
   const traces = useTraces();
   const group = useRef<THREE.Group>(null);
 
@@ -243,14 +252,14 @@ function TraceStars() {
         const r = hashRandom(t.id);
         return {
           id: t.id,
-          color: platformColor(t.platform),
+          color: colors[t.platform] ?? otherPlatform.color,
           createdAt: t.createdAt,
           position: [(r() * 2 - 1) * 8.5, (r() * 2 - 1) * 4.5, -69.6] as [number, number, number],
           base: 0.7 + r() * 0.4,
           phase: r() * 6.3,
         };
       }),
-    [traces],
+    [traces, colors],
   );
 
   useFrame(({ clock }) => {

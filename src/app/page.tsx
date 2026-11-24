@@ -1,4 +1,6 @@
-import { defaultSite, optionalSections, otherPlatform } from "@/config/site";
+import type { CSSProperties } from "react";
+import { otherPlatform } from "@/config/site";
+import { getSiteContent } from "@/lib/content";
 import { BackToTop } from "@/components/chapters/BackToTop";
 import { BootLog } from "@/components/chapters/BootLog";
 import { Chapter, Panel } from "@/components/chapters/Chapter";
@@ -11,15 +13,21 @@ import { ScrollDriver } from "@/components/journey/ScrollDriver";
  * The scroll-driven 3D journey: one fixed WebGL world behind six chapters.
  * Scrolling between chapters morphs the particles and moves the camera.
  */
-export default function Home() {
-  const site = defaultSite;
+export default async function Home() {
+  const site = await getSiteContent();
   const platforms = site.platforms.filter((p) => p.visible);
+  const themeVars = {
+    "--holo": site.theme.primary,
+    "--pink": site.theme.secondary,
+    "--holo-dim": `color-mix(in srgb, ${site.theme.primary} 20%, transparent)`,
+  } as CSSProperties;
+  const traceColors = Object.fromEntries([...platforms, otherPlatform].map((p) => [p.id, p.color]));
 
   return (
-    <>
+    <div style={themeVars}>
       <ScrollDriver />
-      <JourneyCanvas />
-      <Hud handle={site.handle} />
+      <JourneyCanvas theme={site.theme} traceColors={traceColors} />
+      <Hud handle={site.handle} scanlines={site.theme.scanlines} />
 
       <main className="relative z-[3]">
         <Chapter index={0} align="boot">
@@ -93,13 +101,17 @@ export default function Home() {
               and camera move.
             </p>
             <ul className="mt-1.5 mb-4 grid grid-cols-2 gap-x-4 gap-y-1 max-[720px]:grid-cols-1">
-              {optionalSections.map((name) => (
+              {site.sections.map((section) => (
                 <li
-                  key={name}
+                  key={section.key}
                   className="flex justify-between gap-2 border-b border-holo/10 py-1 font-mono text-xs text-[#8fb8c8]"
                 >
-                  {name}
-                  <span className="text-[10px] tracking-widest text-[#ff7ad9]">OFFLINE</span>
+                  {section.title.toLowerCase()}
+                  {section.enabled ? (
+                    <span className="text-[10px] tracking-widest text-holo">ONLINE</span>
+                  ) : (
+                    <span className="text-[10px] tracking-widest text-[#ff7ad9]">OFFLINE</span>
+                  )}
                 </li>
               ))}
             </ul>
@@ -107,6 +119,6 @@ export default function Home() {
           </Panel>
         </Chapter>
       </main>
-    </>
+    </div>
   );
 }
