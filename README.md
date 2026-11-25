@@ -1,5 +1,7 @@
 # folio
 
+Live: https://tokias.vercel.app
+
 A personal portfolio built as a scroll-driven 3D journey in a holographic terminal style. Visitors scroll through one continuous WebGL world, find links to my platforms, and can leave a trace: a hand-drawn signature that becomes a star on the wall. Where they came from is only shown to the admin.
 
 All content (name, intro, links, sections) is edited from an admin panel. Optional sections such as skills, projects, research papers, gallery and certificates are built in and stay hidden until switched on.
