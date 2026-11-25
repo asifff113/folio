@@ -145,11 +145,27 @@ body {
     will-change: transform, opacity;
   }
 
+  /*
+   * Boxes grow with the screen: everything inside (text, fields, buttons,
+   * cards) is scaled together by --panel-zoom, so wide screens get big,
+   * easy-to-read boxes and phones keep the size that fits.
+   */
+  :root {
+    --panel-zoom: 1;
+  }
+  @media (min-width: 1100px) { :root { --panel-zoom: 1.18; } }
+  @media (min-width: 1360px) { :root { --panel-zoom: 1.32; } }
+  @media (min-width: 1600px) { :root { --panel-zoom: 1.48; } }
+  @media (min-width: 1900px) { :root { --panel-zoom: 1.66; } }
+  @media (min-width: 2400px) { :root { --panel-zoom: 2; } }
+  /* Short screens: keep boxes from outgrowing the height. */
+  @media (min-width: 1100px) and (max-height: 760px) { :root { --panel-zoom: 1.12; } }
+
   .panel {
     position: relative;
     width: 100%;
-    max-width: 800px;
-    padding: 44px 48px 48px;
+    max-width: 880px;
+    padding: 48px 56px 52px;
     background:
       linear-gradient(180deg, transparent, color-mix(in srgb, var(--holo) 16%, transparent) 50%, transparent) no-repeat
         0 -60% / 100% 30%,
@@ -164,7 +180,16 @@ body {
     text-shadow: 0 1px 14px rgba(0, 0, 0, 0.55);
   }
   .panel-wide {
-    max-width: 1220px;
+    max-width: 1240px;
+  }
+  /* Only the visitor chapters scale (admin forms stay as they are). */
+  .chapter-fx > .panel {
+    zoom: var(--panel-zoom);
+  }
+  /* Pop-ups and the trace toast open over the page at normal size. */
+  .chapter-fx > .panel dialog,
+  .chapter-fx > .panel .fixed {
+    zoom: calc(1 / var(--panel-zoom));
   }
   .panel::before,
   .panel::after {
@@ -178,7 +203,7 @@ body {
   .panel::before { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; }
   .panel::after { bottom: -1px; right: -1px; border-bottom-width: 2px; border-right-width: 2px; }
   @media (max-width: 720px) {
-    .panel { max-width: none; padding: 30px 22px 32px; }
+    .panel { max-width: none; padding: 32px 22px 34px; }
   }
 
   /* Arrival: brackets draw out, a scan line sweeps down, contents flicker in one by one. */
@@ -356,7 +381,7 @@ body {
 
   .eyebrow {
     margin-bottom: 14px;
-    font: 500 13px var(--font-mono);
+    font: 500 14px var(--font-mono);
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--holo);
@@ -366,14 +391,14 @@ body {
     margin-bottom: 16px;
     font-family: var(--font-display);
     font-weight: 600;
-    font-size: clamp(28px, 3.8vw, 48px);
+    font-size: clamp(30px, 4vw, 50px);
     line-height: 1.15;
     text-wrap: balance;
   }
 
   .panel-text {
     margin-bottom: 12px;
-    font-size: clamp(17px, 1.5vw, 19px);
+    font-size: clamp(18px, 1.5vw, 20px);
     line-height: 1.7;
     color: color-mix(in srgb, var(--fg) 82%, var(--muted));
   }

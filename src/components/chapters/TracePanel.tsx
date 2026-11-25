@@ -247,10 +247,10 @@ function useSignaturePad() {
     if (!el || !ctx) return;
 
     const size = () => {
-      const r = el.getBoundingClientRect();
-      const d = Math.min(window.devicePixelRatio, 2);
-      el.width = Math.max(1, Math.round(r.width * d));
-      el.height = Math.max(1, Math.round(r.height * d));
+      // Layout size, which the box's fly-in animation and screen scaling don't change.
+      const d = Math.min(window.devicePixelRatio, 2) * 1.5;
+      el.width = Math.max(1, Math.round(el.offsetWidth * d));
+      el.height = Math.max(1, Math.round(el.offsetHeight * d));
       ctx.setTransform(d, 0, 0, d, 0, 0);
       ctx.strokeStyle = ctx.fillStyle = "#eef6ff";
       ctx.lineWidth = 2.4;
@@ -266,8 +266,12 @@ function useSignaturePad() {
     let drawing = false;
     let last = { x: 0, y: 0 };
     const at = (e: PointerEvent) => {
+      // The pad may be shown scaled (animation, bigger boxes): map the pointer back to layout size.
       const r = el.getBoundingClientRect();
-      return { x: e.clientX - r.left, y: e.clientY - r.top };
+      return {
+        x: ((e.clientX - r.left) * el.offsetWidth) / (r.width || 1),
+        y: ((e.clientY - r.top) * el.offsetHeight) / (r.height || 1),
+      };
     };
     const down = (e: PointerEvent) => {
       drawing = true;
