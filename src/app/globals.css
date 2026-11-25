@@ -55,16 +55,35 @@ body {
     repeating-linear-gradient(to bottom, color-mix(in srgb, var(--holo) 4%, transparent) 0 1px, transparent 1px 3px);
 }
 
-.glitch {
+/*
+ * The name on the opening screen. Always fully visible. A wave rolls through
+ * the letters every few seconds, and now and then the whole name gives a
+ * small shake.
+ */
+.name-wave {
   text-shadow: 3px 0 var(--pink), -3px 0 var(--holo);
-  animation: glitch 3.4s infinite;
+  animation: name-shake 7s ease-in-out infinite;
+}
+.name-wave > span {
+  display: inline-block;
+  animation: name-letter 3.6s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.08s);
 }
 
-@keyframes glitch {
-  0%, 92%, 100% { transform: none; }
-  93% { transform: translateX(4px) skewX(-8deg); text-shadow: -5px 0 var(--pink), 5px 0 var(--holo); }
-  95% { transform: translateX(-3px); clip-path: inset(30% 0 40% 0); }
-  97% { transform: none; clip-path: none; }
+@keyframes name-letter {
+  0%, 50%, 100% { transform: none; }
+  14% { transform: translateY(-0.12em) rotate(-4deg); }
+  28% { transform: translateY(0.05em) rotate(3deg); }
+  40% { transform: none; }
+}
+
+@keyframes name-shake {
+  0%, 86%, 100% { transform: none; }
+  88% { transform: translateX(-5px) rotate(-0.8deg); }
+  90% { transform: translateX(5px) rotate(0.8deg); }
+  92% { transform: translateX(-3px) rotate(-0.4deg); }
+  94% { transform: translateX(2px); }
+  96% { transform: none; }
 }
 
 @keyframes blink {
@@ -527,7 +546,8 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .glitch,
+  .name-wave,
+  .name-wave > span,
   .blink,
   .scroll-cue i,
   .chapter-glitch,

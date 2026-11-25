@@ -26,7 +26,7 @@ export function ProfileForm({ site }: { site: SiteConfig }) {
         />
       </div>
       <div className="grid gap-x-4 sm:grid-cols-2">
-        <Field label="name" htmlFor="name" hint="The big glitch title.">
+        <Field label="name" htmlFor="name" hint="The big title on the opening screen.">
           <input id="name" name="name" defaultValue={site.name} maxLength={40} required className="text-input" />
         </Field>
         <Field label="handle" htmlFor="handle" hint="Shown as SYS://HANDLE in the corner.">

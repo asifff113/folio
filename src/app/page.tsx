@@ -7,6 +7,7 @@ import { Chapter, Panel } from "@/components/chapters/Chapter";
 import { ConnectPanel } from "@/components/chapters/ConnectPanel";
 import { HelpPanel } from "@/components/chapters/HelpPanel";
 import { TracePanel } from "@/components/chapters/TracePanel";
+import { WaveName } from "@/components/chapters/WaveName";
 import { Hud } from "@/components/hud/Hud";
 import { SectionPanel } from "@/components/sections/SectionPanel";
 import { JourneyCanvas } from "@/components/journey/JourneyCanvas";
@@ -72,9 +73,10 @@ export default async function Home() {
               <i className="ring outer" aria-hidden="true" />
               <i className="scan" aria-hidden="true" />
             </div>
-            <h1 className="glitch font-display text-[clamp(56px,10vw,132px)] leading-[0.9] font-extrabold tracking-[-0.03em] text-[#dffaff]">
-              {site.name}
-            </h1>
+            <WaveName
+              name={site.name}
+              className="font-display text-[clamp(56px,10vw,132px)] leading-[0.9] font-extrabold tracking-[-0.03em] text-[#dffaff]"
+            />
           </div>
         </Chapter>
 
