@@ -14,6 +14,7 @@ import {
   parseSection,
   parseScene,
   parseSectionList,
+  parseSeo,
   parseTheme,
   parseTraceSettings,
   sectionKeyFrom,
@@ -233,6 +234,18 @@ export async function saveScene(_prev: FormState, form: FormData): Promise<FormS
   });
 }
 
+/** SEO & sharing. */
+export async function saveSeo(_prev: FormState, form: FormData): Promise<FormState> {
+  const seo = parseSeo(form);
+  if (!seo.ok) return fail(seo.error);
+  return asAdmin(async (supabase) => {
+    const { error } = await supabase
+      .from("profile")
+      .upsert({ id: 1, seo: seo.data, updated_at: new Date().toISOString() });
+    return error ? `Could not save: ${error.message}` : null;
+  });
+}
+
 /** Journey: chapter order and text, intro, maintenance mode. */
 export async function saveJourney(_prev: FormState, form: FormData): Promise<FormState> {
   const journey = parseJourney(form);
@@ -341,7 +354,7 @@ export async function uploadImage(form: FormData): Promise<UploadResult> {
   const file = form.get("file");
   const folder = String(form.get("folder") ?? "");
   if (!(file instanceof File) || file.size === 0) return { ok: false, message: "Pick an image first." };
-  if (!["avatar", "qr", "section"].includes(folder)) return { ok: false, message: "Unknown upload." };
+  if (!["avatar", "qr", "section", "share"].includes(folder)) return { ok: false, message: "Unknown upload." };
   const ext = IMAGE_TYPES[file.type];
   if (!ext) return { ok: false, message: "Use a PNG, JPG or WebP image." };
   if (file.size > 2 * 1024 * 1024) return { ok: false, message: "Images can be at most 2 MB." };

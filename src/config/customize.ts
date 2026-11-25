@@ -261,3 +261,46 @@ export function normalizeJourney(raw: unknown): JourneySettings {
     maintenanceText: str(r.maintenanceText, d.maintenanceText, 240),
   };
 }
+
+/* ---------- SEO & sharing ---------- */
+
+export type SeoSettings = {
+  /** Browser tab and search result title. Empty = your name. */
+  title: string;
+  /** Search result and link preview text. Empty = your tagline. */
+  description: string;
+  /** The site's public address (https://…). Empty = the Vercel address, found automatically. */
+  siteUrl: string;
+  /** Let search engines list the site (always off during maintenance). */
+  indexable: boolean;
+  /** "auto": made from your name, tagline, picture and colors. "upload": your own image. */
+  shareImage: "auto" | "upload";
+  shareImageUrl: string;
+  /** Browser tab icon: first letter of your name, or your profile picture. */
+  icon: "letter" | "avatar";
+};
+
+export const defaultSeo: SeoSettings = {
+  title: "",
+  description: "",
+  siteUrl: "",
+  indexable: true,
+  shareImage: "auto",
+  shareImageUrl: "",
+  icon: "letter",
+};
+
+export function normalizeSeo(raw: unknown): SeoSettings {
+  const r = obj(raw);
+  const d = defaultSeo;
+  const url = str(r.siteUrl, d.siteUrl, 200).replace(/\/+$/, "");
+  return {
+    title: str(r.title, d.title, 70),
+    description: str(r.description, d.description, 160),
+    siteUrl: /^https?:\/\/[^\s/$.?#].[^\s]*$/i.test(url) ? url : "",
+    indexable: bool(r.indexable, d.indexable),
+    shareImage: pick(r.shareImage, ["auto", "upload"] as const, d.shareImage),
+    shareImageUrl: str(r.shareImageUrl, d.shareImageUrl, 400),
+    icon: pick(r.icon, ["letter", "avatar"] as const, d.icon),
+  };
+}

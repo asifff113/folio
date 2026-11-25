@@ -2,9 +2,11 @@ import {
   defaultJourney,
   defaultLook,
   defaultScene,
+  defaultSeo,
   type JourneySettings,
   type LookSettings,
   type SceneSettings,
+  type SeoSettings,
 } from "./customize";
 
 /**
@@ -162,6 +164,7 @@ export type SiteConfig = {
   look: LookSettings;
   scene: SceneSettings;
   journey: JourneySettings;
+  seo: SeoSettings;
 };
 
 export const defaultSite: SiteConfig = {
@@ -222,6 +225,7 @@ export const defaultSite: SiteConfig = {
   look: defaultLook,
   scene: defaultScene,
   journey: defaultJourney,
+  seo: defaultSeo,
 };
 
 /** Visitors who arrive from somewhere not in the list pick this one. */

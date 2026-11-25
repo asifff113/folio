@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useState } from "react";
 import type { SectionItem } from "@/config/site";
 import { Modal } from "./Modal";
@@ -21,8 +22,13 @@ export function GalleryLayout({ items }: { items: SectionItem[] }) {
               onClick={() => setOpen(i)}
               className="group relative block aspect-square w-full cursor-zoom-in overflow-hidden border border-holo/20 bg-[rgba(2,10,16,.7)] hover:border-holo"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element -- uploaded image from storage */}
-              <img src={p.image} alt={p.title} loading="lazy" className="size-full object-cover transition-transform group-hover:scale-[1.04]" />
+              <Image
+                src={p.image}
+                alt={p.title}
+                fill
+                sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 300px"
+                className="object-cover transition-transform group-hover:scale-[1.04]"
+              />
               {p.title && (
                 <span className="absolute inset-x-0 bottom-0 truncate bg-[rgba(4,10,16,.78)] px-2.5 py-1.5 text-left font-mono text-[12px] text-[#d6f6ff]">
                   {p.title}

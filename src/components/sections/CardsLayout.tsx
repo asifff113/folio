@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SectionItem } from "@/config/site";
 import { paragraphs } from "@/lib/text";
@@ -64,8 +65,13 @@ export function CardsLayout({ items }: { items: SectionItem[] }) {
           <article key={item.id} className="card-tile">
             {item.image && (
               <div className="relative aspect-[16/9] overflow-hidden border-b border-holo/15 bg-[rgba(2,10,16,.7)]">
-                {/* eslint-disable-next-line @next/next/no-img-element -- uploaded image from storage */}
-                <img src={item.image} alt="" loading="lazy" className="size-full object-cover" />
+                <Image
+                  src={item.image}
+                  alt=""
+                  fill
+                  sizes="(max-width: 640px) 90vw, (max-width: 1000px) 45vw, 420px"
+                  className="object-cover"
+                />
                 {item.date && <span className="card-date">{item.date}</span>}
               </div>
             )}

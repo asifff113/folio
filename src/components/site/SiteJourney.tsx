@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Image from "next/image";
 import QRCode from "qrcode";
 import { otherPlatform, type Platform, type SiteConfig } from "@/config/site";
 import { BackToTop } from "@/components/chapters/BackToTop";
@@ -14,6 +15,7 @@ import { SectionPanel } from "@/components/sections/SectionPanel";
 import { type ChapterKey, isSectionChapter, journeyChapters } from "@/lib/journey/store";
 import { sectionHasContent } from "@/lib/sections";
 import { defaultJourney, sceneNumbers } from "@/config/customize";
+import { personJsonLd } from "@/lib/seo";
 import { Intro } from "./Intro";
 import { lookStyle } from "./lookStyle";
 
@@ -70,8 +72,15 @@ export async function SiteJourney({ site, banner }: { site: SiteConfig; banner?:
         return (
           <div className="boot-hero">
             <div className="holo-avatar">
-              {/* eslint-disable-next-line @next/next/no-img-element -- uploaded picture or the built-in placeholder */}
-              <img src={site.avatar || "/avatar-placeholder.svg"} alt={`Picture of ${site.name}`} />
+              <Image
+                src={site.avatar || "/avatar-placeholder.svg"}
+                alt={`Picture of ${site.name}`}
+                width={480}
+                height={480}
+                sizes="(max-width: 720px) 170px, 240px"
+                preload
+                unoptimized={!site.avatar}
+              />
               <i className="ring" aria-hidden="true" />
               <i className="ring outer" aria-hidden="true" />
               <i className="scan" aria-hidden="true" />
@@ -153,6 +162,9 @@ export async function SiteJourney({ site, banner }: { site: SiteConfig; banner?:
       </main>
 
       {journey.intro !== "none" && <Intro settings={journey} name={site.name} />}
+
+      {/* Tells search engines who this site is about and which profiles are yours. */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: personJsonLd(site) }} />
     </div>
   );
 }

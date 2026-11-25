@@ -23,15 +23,18 @@ type SceneProps = {
   chapters: ChapterKey[];
   look: LookSettings;
   scene: SceneSettings;
+  /** Stop drawing (the tab is hidden). */
+  paused?: boolean;
 };
 
 /** The whole WebGL world. Every part reads `journey.current` each frame. */
-export default function Scene({ theme, chapters, look, scene }: SceneProps) {
+export default function Scene({ theme, chapters, look, scene, paused = false }: SceneProps) {
   const last = chapters.length - 1;
   const at = (key: ChapterKey) => chapters.indexOf(key);
   const n = sceneNumbers(scene);
   return (
     <Canvas
+      frameloop={paused ? "never" : "always"}
       dpr={[1, 2]}
       gl={{ antialias: true }}
       camera={{ fov: 55, near: 0.1, far: 300, position: [0, 0.4, 9.5] }}
@@ -141,6 +144,14 @@ function CameraRig({ chapters, sway }: { chapters: ChapterKey[]; sway: number })
 
 /* ---------- particles: morph between chapter shapes ---------- */
 
+/** Fewer particles on phones and on slower devices (few CPU cores or little memory), so they stay smooth. */
+function deviceFactor() {
+  const nav = navigator as Navigator & { deviceMemory?: number };
+  let f = window.innerWidth < 720 ? 0.64 : 1;
+  if ((nav.hardwareConcurrency ?? 8) <= 4 || (nav.deviceMemory ?? 8) <= 4) f *= 0.65;
+  return f;
+}
+
 type Colors = { primary: string; secondary: string };
 
 type ParticleProps = Colors & {
@@ -156,9 +167,8 @@ type ParticleProps = Colors & {
 
 function Particles({ primary, secondary, chapters, signal, count, size, accent, spinSpeed, burst: burstK, shapes }: ParticleProps) {
   const data = useMemo(
-    // Phones get about two thirds of the particles so they stay smooth.
     () =>
-      buildParticles(window.innerWidth < 720 ? Math.round(count * 0.64) : count, primary, secondary, chapters, {
+      buildParticles(Math.round(count * deviceFactor()), primary, secondary, chapters, {
         accent,
         shapes,
       }),

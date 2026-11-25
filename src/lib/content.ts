@@ -2,7 +2,7 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { defaultSite, type HelpItem, type HelpSettings, type Platform, type Section, type SectionItem, type SiteConfig, type Theme, type TraceSettings } from "@/config/site";
-import { normalizeJourney, normalizeLook, normalizeScene } from "@/config/customize";
+import { normalizeJourney, normalizeLook, normalizeScene, normalizeSeo } from "@/config/customize";
 import { createPublicClient } from "@/lib/supabase/clients";
 
 /** Cache tag for everything the public site reads. Admin saves expire it. */
@@ -23,6 +23,7 @@ type ProfileRow = {
   look: unknown;
   scene: unknown;
   journey: unknown;
+  seo: unknown;
 };
 
 type PlatformRow = {
@@ -130,6 +131,7 @@ export async function readSiteContent(supabase: SupabaseClient): Promise<SiteCon
     look: normalizeLook(p?.look),
     scene: normalizeScene(p?.scene),
     journey: normalizeJourney(p?.journey),
+    seo: normalizeSeo(p?.seo),
   };
 }
 

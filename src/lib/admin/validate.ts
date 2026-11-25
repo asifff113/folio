@@ -8,7 +8,7 @@ import {
   type Theme,
   type TraceSettings,
 } from "@/config/site";
-import { normalizeJourney, normalizeLook, normalizeScene } from "@/config/customize";
+import { normalizeJourney, normalizeLook, normalizeScene, normalizeSeo } from "@/config/customize";
 
 /** Validation for everything the admin panel saves. Limits match supabase/schema.sql. */
 type Result<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -391,3 +391,16 @@ function parseSettings<T>(form: FormData, key: string, normalize: (raw: unknown)
 export const parseLook = (form: FormData) => parseSettings(form, "look", normalizeLook, "look");
 export const parseScene = (form: FormData) => parseSettings(form, "scene", normalizeScene, "3D");
 export const parseJourney = (form: FormData) => parseSettings(form, "journey", normalizeJourney, "journey");
+
+/** SEO & sharing. An uploaded share image must come from this site's storage. */
+export function parseSeo(form: FormData): Result<ReturnType<typeof normalizeSeo>> {
+  const parsed = parseSettings(form, "seo", normalizeSeo, "SEO");
+  if (!parsed.ok) return parsed;
+  const raw = parseJson(form, "seo") as { siteUrl?: unknown } | null;
+  if (typeof raw?.siteUrl === "string" && raw.siteUrl.trim() && !parsed.data.siteUrl)
+    return { ok: false, error: "The site address must start with https:// (or leave it empty)." };
+  if (!isOwnImage(parsed.data.shareImageUrl)) return { ok: false, error: "Upload the share image here instead of linking it." };
+  if (parsed.data.shareImage === "upload" && !parsed.data.shareImageUrl)
+    return { ok: false, error: "Upload a share image, or pick \"made for me\"." };
+  return parsed;
+}
