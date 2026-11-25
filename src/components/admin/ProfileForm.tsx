@@ -1,16 +1,30 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import type { SiteConfig } from "@/config/site";
 import { saveProfile } from "@/app/admin/actions";
+import { ImageUpload } from "./ImageUpload";
 import { Field, SaveBar } from "./ui";
 
 export function ProfileForm({ site }: { site: SiteConfig }) {
   const [state, action] = useActionState(saveProfile, null);
+  const [avatar, setAvatar] = useState(site.avatar);
 
   return (
     <form action={action} className="panel max-w-none">
-      <p className="eyebrow">{"// 01 boot"}</p>
+      <p className="eyebrow">{"// 01 opening screen"}</p>
+      <div className="mb-5">
+        <span className="field-label">profile picture</span>
+        <ImageUpload
+          name="avatar_url"
+          folder="avatar"
+          label="Upload profile picture"
+          value={avatar}
+          onChange={setAvatar}
+          placeholder="/avatar-placeholder.svg"
+          round
+        />
+      </div>
       <div className="grid gap-x-4 sm:grid-cols-2">
         <Field label="name" htmlFor="name" hint="The big glitch title.">
           <input id="name" name="name" defaultValue={site.name} maxLength={40} required className="text-input" />
@@ -27,7 +41,7 @@ export function ProfileForm({ site }: { site: SiteConfig }) {
           />
         </Field>
       </div>
-      <Field label="tagline" htmlFor="tagline" hint="One line under the name.">
+      <Field label="tagline" htmlFor="tagline" hint="Used in search results and link previews. Not shown on the page.">
         <input id="tagline" name="tagline" defaultValue={site.tagline} maxLength={140} className="text-input" />
       </Field>
 

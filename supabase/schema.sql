@@ -113,9 +113,9 @@ values (
   1,
   'NAME',
   'your_name',
-  'one-line intro, set in the admin panel',
-  'A short line about who you are.',
-  'This paragraph is written in the admin panel. Two or three sentences is plenty.',
+  'Developer · designer · always learning',
+  'I like turning ideas into things people can touch.',
+  'Developer and designer working at the edge of code and visuals. Lately that means 3D on the web, small useful tools, and learning in public.',
   'Things I''m into right now.',
   array['ai', 'music', 'photography', 'open source', 'gaming', 'design'],
   '{"primary": "#2fe3ff", "secondary": "#ff4fd8", "scanlines": true}'::jsonb

@@ -1,33 +1,24 @@
 import type { ReactNode } from "react";
+import { ChapterFx } from "./ChapterFx";
 
-type ChapterProps = {
-  index: number;
-  /** Which side the panel sits on, so the 3D stays visible on the other side. */
-  align?: "left" | "right" | "center" | "boot";
-  children: ReactNode;
-};
-
-/** One full-height scroll chapter. The scroll driver reads `data-chapter`. */
-export function Chapter({ index, align = "left", children }: ChapterProps) {
-  const layout =
-    align === "boot"
-      ? "items-end pb-[12vh]"
-      : align === "center"
-        ? "items-center justify-center max-[720px]:items-end max-[720px]:pb-16"
-        : align === "right"
-        ? "items-center justify-end max-[720px]:items-end max-[720px]:justify-start max-[720px]:pb-16"
-        : "items-center max-[720px]:items-end max-[720px]:pb-16";
-
+/**
+ * One full-height scroll chapter, its content centred on screen.
+ * The scroll driver reads `data-chapter`; ChapterFx animates the content in and out.
+ */
+export function Chapter({ index, children }: { index: number; children: ReactNode }) {
   return (
-    <section data-chapter={index} className={`flex min-h-svh px-7 py-[72px] max-[720px]:px-4 ${layout}`}>
-      {children}
+    <section
+      data-chapter={index}
+      className="flex min-h-svh items-center justify-center px-6 py-[84px] max-[720px]:px-3.5 max-[720px]:py-16"
+    >
+      <ChapterFx index={index}>{children}</ChapterFx>
     </section>
   );
 }
 
-export function Panel({ eyebrow, children }: { eyebrow: ReactNode; children: ReactNode }) {
+export function Panel({ eyebrow, wide = false, children }: { eyebrow: ReactNode; wide?: boolean; children: ReactNode }) {
   return (
-    <div className="panel">
+    <div className={wide ? "panel panel-wide" : "panel"}>
       <p className="eyebrow">{eyebrow}</p>
       {children}
     </div>

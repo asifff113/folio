@@ -71,7 +71,7 @@ export async function savePlatforms(_prev: FormState, form: FormData): Promise<F
   if (!parsed.ok) return fail(parsed.error);
 
   return asAdmin(async (supabase) => {
-    const rows = parsed.data.map((p, sort) => ({ ...p, sort }));
+    const rows = parsed.data.map(({ qrImage, ...p }, sort) => ({ ...p, qr_image: qrImage, sort }));
     if (rows.length) {
       const { error } = await supabase.from("platforms").upsert(rows);
       if (error) return `Could not save: ${error.message}`;
@@ -166,4 +166,32 @@ export async function setItemStatus(itemId: string, status: "open" | "in_progres
   if (!["open", "in_progress", "solved"].includes(status)) return;
   await inboxChange(itemId, (db) => db.from("help_items").update({ status }).eq("id", itemId));
   updateTag(SITE_TAG);
+}
+
+/* ---------- image uploads (profile picture, QR images) ---------- */
+
+export type UploadResult = { ok: true; url: string } | { ok: false; message: string };
+
+const IMAGE_TYPES: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };
+
+/** Uploads one image to the public "media" bucket and returns its URL. Saving the form stores the URL. */
+export async function uploadImage(form: FormData): Promise<UploadResult> {
+  const file = form.get("file");
+  const folder = String(form.get("folder") ?? "");
+  if (!(file instanceof File) || file.size === 0) return { ok: false, message: "Pick an image first." };
+  if (!["avatar", "qr"].includes(folder)) return { ok: false, message: "Unknown upload." };
+  const ext = IMAGE_TYPES[file.type];
+  if (!ext) return { ok: false, message: "Use a PNG, JPG or WebP image." };
+  if (file.size > 2 * 1024 * 1024) return { ok: false, message: "Images can be at most 2 MB." };
+
+  const session = await getAdminSession();
+  if (session.state !== "admin") return { ok: false, message: "Your session ended. Sign in again." };
+
+  const path = `${folder}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await session.supabase.storage
+    .from("media")
+    .upload(path, file, { contentType: file.type, cacheControl: "31536000", upsert: false });
+  if (error) return { ok: false, message: `Upload failed: ${error.message}` };
+  const { data } = session.supabase.storage.from("media").getPublicUrl(path);
+  return { ok: true, url: data.publicUrl };
 }

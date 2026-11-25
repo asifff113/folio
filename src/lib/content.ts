@@ -1,7 +1,7 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { defaultSite, type HelpItem, type HelpSettings, type SiteConfig, type Theme } from "@/config/site";
+import { defaultSite, type HelpItem, type HelpSettings, type Platform, type SiteConfig, type Theme } from "@/config/site";
 import { createPublicClient } from "@/lib/supabase/clients";
 
 /** Cache tag for everything the public site reads. Admin saves expire it. */
@@ -9,6 +9,7 @@ export const SITE_TAG = "site";
 
 type ProfileRow = {
   name: string;
+  avatar_url: string | null;
   handle: string;
   tagline: string;
   about_heading: string;
@@ -19,7 +20,17 @@ type ProfileRow = {
   help: Partial<HelpSettings> | null;
 };
 
-type PlatformRow = { id: string; label: string; url: string; color: string; visible: boolean };
+type PlatformRow = {
+  id: string;
+  label: string;
+  url: string;
+  color: string;
+  visible: boolean;
+  handle: string;
+  note: string;
+  qr: Platform["qr"];
+  qr_image: string;
+};
 type SectionRow = { key: string; title: string; enabled: boolean };
 
 /**
@@ -32,7 +43,11 @@ const HELP_COLUMNS = "id,kind,title,details,tags,urgency,status,visible";
 export async function readSiteContent(supabase: SupabaseClient): Promise<SiteConfig | null> {
   const [profile, platforms, sections, help] = await Promise.all([
     supabase.from("profile").select("*").eq("id", 1).maybeSingle<ProfileRow>(),
-    supabase.from("platforms").select("id,label,url,color,visible").order("sort").returns<PlatformRow[]>(),
+    supabase
+      .from("platforms")
+      .select("id,label,url,color,visible,handle,note,qr,qr_image")
+      .order("sort")
+      .returns<PlatformRow[]>(),
     supabase.from("sections").select("key,title,enabled").order("sort").returns<SectionRow[]>(),
     supabase.from("help_items").select(HELP_COLUMNS).order("sort").returns<HelpItem[]>(),
   ]);
@@ -46,6 +61,7 @@ export async function readSiteContent(supabase: SupabaseClient): Promise<SiteCon
   const p = profile.data;
   return {
     name: p?.name || defaultSite.name,
+    avatar: p?.avatar_url ?? "",
     handle: p?.handle || defaultSite.handle,
     tagline: p?.tagline ?? defaultSite.tagline,
     about: {
@@ -56,7 +72,9 @@ export async function readSiteContent(supabase: SupabaseClient): Promise<SiteCon
       heading: p?.interests_heading ?? defaultSite.interests.heading,
       tags: p?.interests_tags ?? defaultSite.interests.tags,
     },
-    platforms: platforms.data ?? defaultSite.platforms,
+    platforms: platforms.data
+      ? platforms.data.map(({ qr_image, ...rest }) => ({ ...rest, qrImage: qr_image }))
+      : defaultSite.platforms,
     sections: sections.data ?? defaultSite.sections,
     theme: { ...defaultSite.theme, ...(p?.theme ?? {}) },
     help: { ...defaultSite.help, ...(p?.help ?? {}), items: help.data ?? [] },

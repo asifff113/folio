@@ -76,7 +76,6 @@ export function TracePanel({ platforms }: { platforms: Platform[] }) {
             </li>
           ))}
       </ul>
-      <p className="placeholder-note -mt-2 mb-2">demo traces, real ones arrive in phase 5</p>
 
       <label className="field-label" htmlFor="signature">
         signature

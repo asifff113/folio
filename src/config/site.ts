@@ -5,12 +5,21 @@
  * and stored in Supabase; this file is the fallback used when Supabase is not
  * set up yet or cannot be reached.
  */
+export type QrMode = "none" | "generated" | "image";
+
 export type Platform = {
   id: string;
   label: string;
   url: string;
   color: string;
   visible: boolean;
+  /** Shown when a visitor opens the platform, e.g. "@name" or "name#1234". */
+  handle: string;
+  /** Short line on how to reach you there, e.g. "DM me and mention the site". */
+  note: string;
+  /** QR code shown in the opened platform: none, made from the link, or an uploaded image. */
+  qr: QrMode;
+  qrImage: string;
 };
 
 export type Theme = {
@@ -66,6 +75,8 @@ export type ContactPlatform = (typeof CONTACT_PLATFORMS)[number]["id"];
 
 export type SiteConfig = {
   name: string;
+  /** Profile picture URL; empty shows the built-in placeholder. */
+  avatar: string;
   handle: string;
   tagline: string;
   about: { heading: string; body: string };
@@ -78,23 +89,24 @@ export type SiteConfig = {
 
 export const defaultSite: SiteConfig = {
   name: "NAME",
+  avatar: "",
   handle: "your_name",
-  tagline: "one-line intro, set in the admin panel",
+  tagline: "Developer · designer · always learning",
   about: {
-    heading: "A short line about who you are.",
-    body: "This paragraph is written in the admin panel. Two or three sentences is plenty.",
+    heading: "I like turning ideas into things people can touch.",
+    body: "Developer and designer working at the edge of code and visuals. Lately that means 3D on the web, small useful tools, and learning in public.",
   },
   interests: {
     heading: "Things I'm into right now.",
     tags: ["ai", "music", "photography", "open source", "gaming", "design"],
   },
   platforms: [
-    { id: "discord", label: "Discord", url: "", color: "#5865F2", visible: true },
-    { id: "telegram", label: "Telegram", url: "", color: "#2AABEE", visible: true },
-    { id: "instagram", label: "Instagram", url: "", color: "#E1306C", visible: true },
-    { id: "github", label: "GitHub", url: "", color: "#d0d7de", visible: true },
-    { id: "linkedin", label: "LinkedIn", url: "", color: "#3d8fe0", visible: true },
-    { id: "x", label: "X", url: "", color: "#f2f2f2", visible: true },
+    { id: "discord", label: "Discord", url: "", color: "#5865F2", visible: true, handle: "", note: "", qr: "none", qrImage: "" },
+    { id: "telegram", label: "Telegram", url: "", color: "#2AABEE", visible: true, handle: "", note: "", qr: "none", qrImage: "" },
+    { id: "instagram", label: "Instagram", url: "", color: "#E1306C", visible: true, handle: "", note: "", qr: "none", qrImage: "" },
+    { id: "github", label: "GitHub", url: "", color: "#d0d7de", visible: true, handle: "", note: "", qr: "none", qrImage: "" },
+    { id: "linkedin", label: "LinkedIn", url: "", color: "#3d8fe0", visible: true, handle: "", note: "", qr: "none", qrImage: "" },
+    { id: "x", label: "X", url: "", color: "#f2f2f2", visible: true, handle: "", note: "", qr: "none", qrImage: "" },
   ],
   sections: [
     ["now", "Now"],
@@ -130,4 +142,8 @@ export const otherPlatform: Platform = {
   url: "",
   color: "#a58bff",
   visible: true,
+  handle: "",
+  note: "",
+  qr: "none",
+  qrImage: "",
 };

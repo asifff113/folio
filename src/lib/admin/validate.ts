@@ -14,6 +14,7 @@ function tooLong(label: string, value: string, max: number) {
 
 export function parseProfile(form: FormData): Result<{
   name: string;
+  avatar_url: string;
   handle: string;
   tagline: string;
   about_heading: string;
@@ -22,6 +23,7 @@ export function parseProfile(form: FormData): Result<{
   interests_tags: string[];
 }> {
   const name = text(form, "name");
+  const avatar = text(form, "avatar_url");
   const handle = text(form, "handle");
   const tagline = text(form, "tagline");
   const aboutHeading = text(form, "about_heading");
@@ -33,6 +35,7 @@ export function parseProfile(form: FormData): Result<{
     .filter(Boolean);
 
   if (!name) return { ok: false, error: "Name is required." };
+  if (!isOwnImage(avatar)) return { ok: false, error: "Upload the profile picture here instead of linking it." };
   if (!handle) return { ok: false, error: "Handle is required." };
   if (!/^[A-Za-z0-9_.-]+$/.test(handle))
     return { ok: false, error: "Handle can only use letters, numbers, dots, dashes and underscores." };
@@ -53,6 +56,7 @@ export function parseProfile(form: FormData): Result<{
     ok: true,
     data: {
       name,
+      avatar_url: avatar,
       handle,
       tagline,
       about_heading: aboutHeading,
@@ -70,6 +74,15 @@ function parseJson(form: FormData, key: string): unknown {
     return null;
   }
 }
+
+/** True for an image uploaded to this project's own "media" bucket (or empty). */
+export function isOwnImage(url: string) {
+  if (url === "") return true;
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  return !!base && url.length <= 400 && url.startsWith(`${base}/storage/v1/object/public/media/`);
+}
+
+const QR_MODES = new Set(["none", "generated", "image"]);
 
 function isSafeUrl(url: string) {
   if (url === "") return true;
@@ -95,14 +108,34 @@ export function parsePlatforms(form: FormData): Result<Platform[]> {
     const label = String(p.label ?? "").trim();
     const url = String(p.url ?? "").trim();
     const color = String(p.color ?? "");
+    const handle = String(p.handle ?? "").trim();
+    const note = String(p.note ?? "").trim();
+    const qr = String(p.qr ?? "none");
+    const qrImage = String(p.qrImage ?? "");
     if (!SLUG.test(id)) return { ok: false, error: `"${label || id}" has an invalid id.` };
     if (seen.has(id)) return { ok: false, error: `Two links share the id "${id}".` };
     if (!label || label.length > 32) return { ok: false, error: "Every link needs a name of 1 to 32 characters." };
     if (!isSafeUrl(url))
       return { ok: false, error: `The ${label} link must start with https://, http:// or mailto:.` };
     if (!HEX.test(color)) return { ok: false, error: `The ${label} color must look like #2fe3ff.` };
+    if (handle.length > 60) return { ok: false, error: `The ${label} username can be at most 60 characters.` };
+    if (note.length > 200) return { ok: false, error: `The ${label} note can be at most 200 characters.` };
+    if (!QR_MODES.has(qr)) return { ok: false, error: `The ${label} QR setting is invalid.` };
+    if (!isOwnImage(qrImage)) return { ok: false, error: `The ${label} QR image must be uploaded here.` };
+    if (qr === "generated" && !url) return { ok: false, error: `${label} needs a link to make a QR code from.` };
+    if (qr === "image" && !qrImage) return { ok: false, error: `Upload a QR image for ${label}, or pick another QR option.` };
     seen.add(id);
-    out.push({ id, label, url, color: color.toLowerCase(), visible: p.visible !== false });
+    out.push({
+      id,
+      label,
+      url,
+      color: color.toLowerCase(),
+      visible: p.visible !== false,
+      handle,
+      note,
+      qr: qr as Platform["qr"],
+      qrImage,
+    });
   }
   return { ok: true, data: out };
 }

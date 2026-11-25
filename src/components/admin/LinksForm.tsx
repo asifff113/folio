@@ -1,9 +1,16 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import type { Platform } from "@/config/site";
+import type { Platform, QrMode } from "@/config/site";
 import { savePlatforms } from "@/app/admin/actions";
+import { ImageUpload } from "./ImageUpload";
 import { SaveBar } from "./ui";
+
+const QR_OPTIONS: { id: QrMode; label: string }[] = [
+  { id: "none", label: "no QR" },
+  { id: "generated", label: "make from link" },
+  { id: "image", label: "upload my own" },
+];
 
 type Row = Platform & { key: string };
 
@@ -16,8 +23,11 @@ const slug = (label: string) =>
 
 export function LinksForm({ platforms }: { platforms: Platform[] }) {
   const [state, action] = useActionState(savePlatforms, null);
-  const [rows, setRows] = useState<Row[]>(() => platforms.map((p) => ({ ...p, key: p.id })));
+  const [rows, setRows] = useState<Row[]>(() =>
+    platforms.map((p) => ({ ...p, key: p.id })),
+  );
   const [newLabel, setNewLabel] = useState("");
+  const [details, setDetails] = useState<string | null>(null);
 
   const update = (key: string, patch: Partial<Platform>) =>
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -34,11 +44,40 @@ export function LinksForm({ platforms }: { platforms: Platform[] }) {
     let id = slug(label);
     const taken = new Set(rows.map((r) => r.id));
     for (let n = 2; taken.has(id); n++) id = `${slug(label).slice(0, 28)}-${n}`;
-    setRows((rs) => [...rs, { id, key: id, label, url: "", color: "#2fe3ff", visible: true }]);
+    setRows((rs) => [
+      ...rs,
+      {
+        id,
+        key: id,
+        label,
+        url: "",
+        color: "#2fe3ff",
+        visible: true,
+        handle: "",
+        note: "",
+        qr: "none",
+        qrImage: "",
+      },
+    ]);
+    setDetails(id);
     setNewLabel("");
   };
 
-  const payload = JSON.stringify(rows.map(({ id, label, url, color, visible }) => ({ id, label, url, color, visible })));
+  const payload = JSON.stringify(
+    rows.map(
+      ({ id, label, url, color, visible, handle, note, qr, qrImage }) => ({
+        id,
+        label,
+        url,
+        color,
+        visible,
+        handle,
+        note,
+        qr,
+        qrImage,
+      }),
+    ),
+  );
 
   return (
     <form action={action} className="panel max-w-none">
@@ -47,7 +86,10 @@ export function LinksForm({ platforms }: { platforms: Platform[] }) {
 
       <ul className="space-y-2.5">
         {rows.map((r, i) => (
-          <li key={r.key} className="border border-holo/15 bg-[rgba(2,10,16,.5)] p-3">
+          <li
+            key={r.key}
+            className="border border-holo/15 bg-[rgba(2,10,16,.5)] p-3"
+          >
             <div className="flex flex-wrap items-center gap-2">
               <input
                 type="color"
@@ -82,21 +124,112 @@ export function LinksForm({ platforms }: { platforms: Platform[] }) {
                 />
                 visible
               </label>
+              <button
+                type="button"
+                className="ghost-btn"
+                aria-expanded={details === r.key}
+                onClick={() => setDetails(details === r.key ? null : r.key)}
+              >
+                {details === r.key ? "hide visitor card" : "visitor card · QR"}
+              </button>
               <span className="flex-1" />
-              <button type="button" className="ghost-btn" disabled={i === 0} onClick={() => move(i, -1)}>
+              <button
+                type="button"
+                className="ghost-btn"
+                disabled={i === 0}
+                onClick={() => move(i, -1)}
+              >
                 ↑ up
               </button>
-              <button type="button" className="ghost-btn" disabled={i === rows.length - 1} onClick={() => move(i, 1)}>
+              <button
+                type="button"
+                className="ghost-btn"
+                disabled={i === rows.length - 1}
+                onClick={() => move(i, 1)}
+              >
                 ↓ down
               </button>
               <button
                 type="button"
                 className="ghost-btn hover:border-pink hover:text-pink"
-                onClick={() => setRows((rs) => rs.filter((x) => x.key !== r.key))}
+                onClick={() =>
+                  setRows((rs) => rs.filter((x) => x.key !== r.key))
+                }
               >
                 remove
               </button>
             </div>
+
+            {details === r.key && (
+              <div className="mt-3 border-t border-holo/15 pt-1">
+                <p className="mt-2 font-mono text-[12px] text-muted">
+                  What a visitor sees after clicking {r.label} in &quot;Connect
+                  with me&quot;.
+                </p>
+                <div className="grid gap-x-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="field-label">username / handle</span>
+                    <input
+                      className="text-input"
+                      maxLength={60}
+                      value={r.handle}
+                      placeholder="@yourname"
+                      onChange={(e) =>
+                        update(r.key, { handle: e.target.value })
+                      }
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="field-label">note</span>
+                    <input
+                      className="text-input"
+                      maxLength={200}
+                      value={r.note}
+                      placeholder="DM me and say you came from the site"
+                      onChange={(e) => update(r.key, { note: e.target.value })}
+                    />
+                  </label>
+                </div>
+                <span className="field-label" id={`qr-${r.key}`}>
+                  qr code
+                </span>
+                <div
+                  role="radiogroup"
+                  aria-labelledby={`qr-${r.key}`}
+                  className="flex flex-wrap gap-1.5"
+                >
+                  {QR_OPTIONS.map((o) => (
+                    <button
+                      key={o.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={r.qr === o.id}
+                      className="chip"
+                      onClick={() => update(r.key, { qr: o.id })}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+                {r.qr === "generated" && (
+                  <p className="mt-2 font-mono text-[12px] text-muted">
+                    {r.url
+                      ? "A QR code for the link above is made automatically."
+                      : "Add a link above first."}
+                  </p>
+                )}
+                {r.qr === "image" && (
+                  <div className="mt-3">
+                    <ImageUpload
+                      folder="qr"
+                      label={`Upload ${r.label} QR code`}
+                      value={r.qrImage}
+                      onChange={(url) => update(r.key, { qrImage: url })}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </li>
         ))}
       </ul>
@@ -121,7 +254,8 @@ export function LinksForm({ platforms }: { platforms: Platform[] }) {
         </button>
       </div>
       <p className="mt-2 font-mono text-[11px] text-muted">
-        Links without a URL show as &quot;not set&quot;. Hidden links stay saved but are not shown.
+        Visitors only see links that have a URL or a username. Hidden links stay
+        saved but are not shown.
       </p>
 
       <SaveBar state={state} />
