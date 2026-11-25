@@ -6,10 +6,13 @@ import { SITE_TAG } from "@/lib/content";
 import { getAdminSession } from "@/lib/admin/session";
 import {
   parseHelp,
+  parseJourney,
+  parseLook,
   parseNewSection,
   parsePlatforms,
   parseProfile,
   parseSection,
+  parseScene,
   parseSectionList,
   parseTheme,
   parseTraceSettings,
@@ -203,14 +206,41 @@ export async function saveSection(_prev: FormState, form: FormData): Promise<For
   });
 }
 
-export async function saveTheme(_prev: FormState, form: FormData): Promise<FormState> {
-  const parsed = parseTheme(form);
-  if (!parsed.ok) return fail(parsed.error);
+/** Look: theme colors and scanlines plus fonts, glow, glass, effects and HUD. */
+export async function saveLook(_prev: FormState, form: FormData): Promise<FormState> {
+  const theme = parseTheme(form);
+  if (!theme.ok) return fail(theme.error);
+  const look = parseLook(form);
+  if (!look.ok) return fail(look.error);
 
   return asAdmin(async (supabase) => {
     const { error } = await supabase
       .from("profile")
-      .upsert({ id: 1, theme: parsed.data, updated_at: new Date().toISOString() });
+      .upsert({ id: 1, theme: theme.data, look: look.data, updated_at: new Date().toISOString() });
+    return error ? `Could not save: ${error.message}` : null;
+  });
+}
+
+/** 3D & motion. */
+export async function saveScene(_prev: FormState, form: FormData): Promise<FormState> {
+  const scene = parseScene(form);
+  if (!scene.ok) return fail(scene.error);
+  return asAdmin(async (supabase) => {
+    const { error } = await supabase
+      .from("profile")
+      .upsert({ id: 1, scene: scene.data, updated_at: new Date().toISOString() });
+    return error ? `Could not save: ${error.message}` : null;
+  });
+}
+
+/** Journey: chapter order and text, intro, maintenance mode. */
+export async function saveJourney(_prev: FormState, form: FormData): Promise<FormState> {
+  const journey = parseJourney(form);
+  if (!journey.ok) return fail(journey.error);
+  return asAdmin(async (supabase) => {
+    const { error } = await supabase
+      .from("profile")
+      .upsert({ id: 1, journey: journey.data, updated_at: new Date().toISOString() });
     return error ? `Could not save: ${error.message}` : null;
   });
 }

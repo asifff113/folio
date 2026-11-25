@@ -7,10 +7,11 @@ type Props = {
   platforms: Platform[];
   /** Platform id → QR code SVG made from its link (only for platforms set to "generated"). */
   qrCodes: Record<string, string>;
+  title?: string;
 };
 
 /** "Connect with me": a row per platform; clicking one opens how to reach you there. */
-export function ConnectPanel({ platforms, qrCodes }: Props) {
+export function ConnectPanel({ platforms, qrCodes, title = "Connect with me." }: Props) {
   // Visitors only see platforms that lead somewhere.
   const shown = platforms.filter((p) => p.url || p.handle);
   const [open, setOpen] = useState<string | null>(null);
@@ -18,7 +19,7 @@ export function ConnectPanel({ platforms, qrCodes }: Props) {
   return (
     <div className="panel">
       <p className="eyebrow">{"// signal"}</p>
-      <h2 className="panel-title">Connect with me.</h2>
+      <h2 className="panel-title">{title}</h2>
 
       {shown.length === 0 ? (
         <p className="panel-text">Links are on their way.</p>

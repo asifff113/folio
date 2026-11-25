@@ -5,6 +5,14 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import * as THREE from "three";
 import type { Theme } from "@/config/site";
+import {
+  bloomFrom,
+  fogFrom,
+  type LookSettings,
+  type SceneSettings,
+  type ShapeName,
+  sceneNumbers,
+} from "@/config/customize";
 import { type ChapterKey, type FixedChapter, clamp, isSectionChapter, journey, ramp, smooth } from "@/lib/journey/store";
 import { useTraces } from "@/lib/traces/store";
 import { buildParticles, glowTexture, hashRandom } from "./shapes";
@@ -13,12 +21,15 @@ type SceneProps = {
   theme: Theme;
   /** Chapters present, in scroll order. */
   chapters: ChapterKey[];
+  look: LookSettings;
+  scene: SceneSettings;
 };
 
 /** The whole WebGL world. Every part reads `journey.current` each frame. */
-export default function Scene({ theme, chapters }: SceneProps) {
+export default function Scene({ theme, chapters, look, scene }: SceneProps) {
   const last = chapters.length - 1;
   const at = (key: ChapterKey) => chapters.indexOf(key);
+  const n = sceneNumbers(scene);
   return (
     <Canvas
       dpr={[1, 2]}
@@ -31,17 +42,33 @@ export default function Scene({ theme, chapters }: SceneProps) {
       }
     >
       <color attach="background" args={["#05070c"]} />
-      <fogExp2 attach="fog" args={["#05070c", 0.028]} />
-      <CameraRig chapters={chapters} />
-      <Particles primary={theme.primary} secondary={theme.secondary} chapters={chapters} signal={at("SIGNAL")} />
-      <Hologram primary={theme.primary} secondary={theme.secondary} signal={at("SIGNAL")} last={last} />
-      <GridFloor primary={theme.primary} />
-      <TunnelRings primary={theme.primary} signal={at("SIGNAL")} />
+      <fogExp2 attach="fog" args={["#05070c", fogFrom(look)]} />
+      <CameraRig chapters={chapters} sway={n.sway} />
+      <Particles
+        primary={theme.primary}
+        secondary={theme.secondary}
+        chapters={chapters}
+        signal={at("SIGNAL")}
+        count={n.count}
+        size={n.size}
+        accent={n.accent}
+        spinSpeed={n.spin}
+        burst={n.burst}
+        shapes={scene.shapes}
+      />
+      {scene.hologram && (
+        <Hologram primary={theme.primary} secondary={theme.secondary} signal={at("SIGNAL")} last={last} />
+      )}
+      {scene.grid && <GridFloor primary={theme.primary} />}
+      {scene.rings && at("SIGNAL") >= 0 && <TunnelRings primary={theme.primary} signal={at("SIGNAL")} />}
+      {scene.stars && <BackgroundStars primary={theme.primary} />}
+      {scene.shooting && <ShootingStars primary={theme.primary} />}
+      {scene.beams && <LightBeams primary={theme.primary} secondary={theme.secondary} signal={at("SIGNAL")} />}
       {at("TRACES") >= 0 && (
         <TraceStars palette={[theme.primary, theme.secondary, "#bff6ff", "#a58bff"]} traces={at("TRACES")} />
       )}
       <EffectComposer>
-        <Bloom mipmapBlur intensity={0.55} luminanceThreshold={0.25} luminanceSmoothing={0.3} />
+        <Bloom mipmapBlur intensity={bloomFrom(look)} luminanceThreshold={0.25} luminanceSmoothing={0.3} />
       </EffectComposer>
     </Canvas>
   );
@@ -76,7 +103,7 @@ function keyframes(chapters: ChapterKey[]) {
   });
 }
 
-function CameraRig({ chapters }: { chapters: ChapterKey[] }) {
+function CameraRig({ chapters, sway }: { chapters: ChapterKey[]; sway: number }) {
   const width = useThree((s) => s.size.width);
   const pos = useMemo(() => new THREE.Vector3(), []);
   const look = useMemo(() => new THREE.Vector3(), []);
@@ -105,7 +132,7 @@ function CameraRig({ chapters }: { chapters: ChapterKey[] }) {
     paths.camera.getPoint(u, pos);
     paths.look.getPoint(u, look);
     const p = journey.pointer;
-    cam.position.set(pos.x + p.x * 1.2, pos.y + p.y * 0.8, pos.z);
+    cam.position.set(pos.x + p.x * sway, pos.y + p.y * sway * 0.67, pos.z);
     cam.lookAt(look);
   });
 
@@ -116,10 +143,26 @@ function CameraRig({ chapters }: { chapters: ChapterKey[] }) {
 
 type Colors = { primary: string; secondary: string };
 
-function Particles({ primary, secondary, chapters, signal }: Colors & { chapters: ChapterKey[]; signal: number }) {
+type ParticleProps = Colors & {
+  chapters: ChapterKey[];
+  signal: number;
+  count: number;
+  size: number;
+  accent: number;
+  spinSpeed: number;
+  burst: number;
+  shapes: Record<string, ShapeName>;
+};
+
+function Particles({ primary, secondary, chapters, signal, count, size, accent, spinSpeed, burst: burstK, shapes }: ParticleProps) {
   const data = useMemo(
-    () => buildParticles(window.innerWidth < 720 ? 3200 : 5000, primary, secondary, chapters),
-    [primary, secondary, chapters],
+    // Phones get about two thirds of the particles so they stay smooth.
+    () =>
+      buildParticles(window.innerWidth < 720 ? Math.round(count * 0.64) : count, primary, secondary, chapters, {
+        accent,
+        shapes,
+      }),
+    [primary, secondary, chapters, count, accent, shapes],
   );
   const last = chapters.length - 1;
   const points = useRef<THREE.Points>(null);
@@ -143,7 +186,7 @@ function Particles({ primary, secondary, chapters, signal }: Colors & { chapters
       const sd = data.seed[i];
       // Staggered per particle; mid-morph each particle bursts outwards.
       const e = smooth(clamp((f - 0.12 - sd * 0.3) / 0.45, 0, 1));
-      const burst = Math.sin(Math.PI * e) * (1.2 + sd * 2.2);
+      const burst = Math.sin(Math.PI * e) * (1.2 + sd * 2.2) * burstK;
       pos[i3] = A[i3] + (B[i3] - A[i3]) * e + data.dir[i3] * burst + Math.sin(t * 1.3 + sd * 40) * wobble;
       pos[i3 + 1] = A[i3 + 1] + (B[i3 + 1] - A[i3 + 1]) * e + data.dir[i3 + 1] * burst + Math.cos(t * 1.1 + sd * 30) * wobble;
       pos[i3 + 2] = A[i3 + 2] + (B[i3 + 2] - A[i3 + 2]) * e + data.dir[i3 + 2] * burst;
@@ -153,7 +196,7 @@ function Particles({ primary, secondary, chapters, signal }: Colors & { chapters
     // The shapes around the origin (galaxy, helix, sections) turn slowly; before the
     // tunnel the cloud eases back to a whole turn so the far shapes sit straight.
     if (journey.reducedMotion) spin.current = 0;
-    else if (s > 0.5 && s < signal - 0.9) spin.current += Math.min(dt, 0.1) * 0.12;
+    else if (s > 0.5 && (signal < 0 || s < signal - 0.9)) spin.current += Math.min(dt, 0.1) * spinSpeed;
     else {
       const rest = Math.round(spin.current / (Math.PI * 2)) * Math.PI * 2;
       spin.current += (rest - spin.current) * Math.min(1, dt * 3);
@@ -168,7 +211,7 @@ function Particles({ primary, secondary, chapters, signal }: Colors & { chapters
         <bufferAttribute attach="attributes-color" args={[data.colors, 3]} />
       </bufferGeometry>
       <pointsMaterial
-        size={0.13}
+        size={size}
         map={glowTexture()}
         vertexColors
         transparent
@@ -332,6 +375,159 @@ function TraceStars({ palette, traces: chapter }: { palette: string[]; traces: n
             blending={THREE.AdditiveBlending}
           />
         </sprite>
+      ))}
+    </group>
+  );
+}
+
+/* ---------- optional extras (3D settings) ---------- */
+
+/** Faint far-away stars all around, untouched by the fog. */
+function BackgroundStars({ primary }: { primary: string }) {
+  const points = useRef<THREE.Points>(null);
+  const geometry = useMemo(() => {
+    const n = 1400;
+    const pos = new Float32Array(n * 3);
+    const rnd = hashRandom("background-stars");
+    for (let i = 0; i < n; i++) {
+      const th = rnd() * Math.PI * 2;
+      const ph = Math.acos(2 * rnd() - 1);
+      const R = 110 + rnd() * 40;
+      pos[i * 3] = Math.sin(ph) * Math.cos(th) * R;
+      pos[i * 3 + 1] = Math.abs(Math.cos(ph)) * R * 0.8 - 10;
+      pos[i * 3 + 2] = Math.sin(ph) * Math.sin(th) * R - 35;
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    return g;
+  }, []);
+  const color = useMemo(() => new THREE.Color(primary).lerp(new THREE.Color("#ffffff"), 0.7), [primary]);
+
+  useFrame(({ clock }) => {
+    if (!points.current) return;
+    const m = points.current.material as THREE.PointsMaterial;
+    m.opacity = 0.55 + Math.sin(clock.elapsedTime * 0.7) * 0.15;
+    points.current.rotation.y = clock.elapsedTime * 0.004;
+  });
+
+  return (
+    <points ref={points} geometry={geometry} frustumCulled={false}>
+      <pointsMaterial
+        size={0.55}
+        map={glowTexture()}
+        color={color}
+        transparent
+        opacity={0.6}
+        depthWrite={false}
+        fog={false}
+        blending={THREE.AdditiveBlending}
+      />
+    </points>
+  );
+}
+
+/** Now and then a streak crosses the sky. */
+function ShootingStars({ primary }: { primary: string }) {
+  const mesh = useRef<THREE.Mesh>(null);
+  const state = useRef({ next: 3, t: -1, from: new THREE.Vector3(), dir: new THREE.Vector3() });
+
+  useFrame(({ clock, camera }, dt) => {
+    const m = mesh.current;
+    if (!m) return;
+    const st = state.current;
+    const now = clock.elapsedTime;
+    if (st.t < 0 && now > st.next && !journey.reducedMotion) {
+      // Start somewhere ahead of the camera, up in the sky.
+      const ahead = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+      st.from
+        .copy(camera.position)
+        .addScaledVector(ahead, 40)
+        .add(new THREE.Vector3((Math.random() - 0.5) * 40, 10 + Math.random() * 8, 0));
+      st.dir.set(-0.8 - Math.random() * 0.4, -0.45, (Math.random() - 0.5) * 0.3).normalize();
+      st.t = 0;
+    }
+    if (st.t >= 0) {
+      st.t += dt;
+      const life = 1.1;
+      const k = st.t / life;
+      m.visible = k < 1;
+      m.position.copy(st.from).addScaledVector(st.dir, st.t * 38);
+      m.lookAt(m.position.clone().add(st.dir));
+      m.rotateY(Math.PI / 2);
+      (m.material as THREE.MeshBasicMaterial).opacity = Math.sin(Math.PI * Math.min(1, k)) * 0.9;
+      if (k >= 1) {
+        st.t = -1;
+        st.next = now + 5 + Math.random() * 9;
+      }
+    } else m.visible = false;
+  });
+
+  return (
+    <mesh ref={mesh} visible={false}>
+      <planeGeometry args={[4.5, 0.05]} />
+      <meshBasicMaterial
+        color={primary}
+        transparent
+        opacity={0}
+        depthWrite={false}
+        fog={false}
+        side={THREE.DoubleSide}
+        blending={THREE.AdditiveBlending}
+      />
+    </mesh>
+  );
+}
+
+/** Soft beams of light turning slowly behind the first chapters. */
+function LightBeams({ primary, secondary, signal }: Colors & { signal: number }) {
+  const group = useRef<THREE.Group>(null);
+  const texture = useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = 4;
+    c.height = 128;
+    const g = c.getContext("2d")!;
+    const gr = g.createLinearGradient(0, 0, 0, 128);
+    gr.addColorStop(0, "rgba(255,255,255,0)");
+    gr.addColorStop(0.5, "rgba(255,255,255,1)");
+    gr.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = gr;
+    g.fillRect(0, 0, 4, 128);
+    return new THREE.CanvasTexture(c);
+  }, []);
+  const beams = [
+    { color: primary, x: -5, rot: 0.35, w: 2.2 },
+    { color: secondary, x: 1.5, rot: -0.2, w: 1.4 },
+    { color: primary, x: 6, rot: 0.15, w: 3 },
+  ];
+
+  useFrame(({ clock }) => {
+    const g = group.current;
+    if (!g) return;
+    const s = journey.current;
+    const fade = signal < 0 ? 1 : 1 - ramp(s, signal - 1, 0.8);
+    g.visible = fade > 0.01;
+    g.rotation.y = Math.sin(clock.elapsedTime * 0.08) * 0.5;
+    g.children.forEach((child, i) => {
+      const mat = (child as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      mat.opacity = (0.07 + Math.sin(clock.elapsedTime * 0.5 + i * 2) * 0.03) * fade;
+    });
+  });
+
+  return (
+    <group ref={group} position={[0, 0, -9]}>
+      {beams.map((b, i) => (
+        <mesh key={i} position={[b.x, 2, 0]} rotation={[0, 0, b.rot]}>
+          <planeGeometry args={[b.w, 26]} />
+          <meshBasicMaterial
+            map={texture}
+            color={b.color}
+            transparent
+            opacity={0.08}
+            depthWrite={false}
+            side={THREE.DoubleSide}
+            blending={THREE.AdditiveBlending}
+          />
+        </mesh>
       ))}
     </group>
   );

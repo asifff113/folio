@@ -36,7 +36,17 @@ function useNow() {
  * The traces log plus the "leave your trace" form. Names are optional and
  * where someone found you is only stored for the admin, never shown here.
  */
-export function TracePanel({ platforms, settings }: { platforms: Platform[]; settings: TraceSettings }) {
+export function TracePanel({
+  platforms,
+  settings,
+  title = "Leave your trace.",
+  text = "",
+}: {
+  platforms: Platform[];
+  settings: TraceSettings;
+  title?: string;
+  text?: string;
+}) {
   const wall = useTraces();
   const now = useNow();
   const [platform, setPlatform] = useState<string | null>(null);
@@ -108,8 +118,8 @@ export function TracePanel({ platforms, settings }: { platforms: Platform[]; set
         </>
       }
     >
-      <h2 className="panel-title">Leave your trace.</h2>
-      <p className="panel-text">Sign the wall. Every signature becomes a star behind this box. A name is optional.</p>
+      <h2 className="panel-title">{title}</h2>
+      {text && <p className="panel-text">{text}</p>}
 
       {wall.ready && log.length === 0 ? (
         <p className="my-4 border-y border-holo/10 py-3 font-mono text-[15px] text-[#9fc3d3]">

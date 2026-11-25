@@ -1,15 +1,15 @@
 import { Suspense } from "react";
 import { AdminContent, AdminLoading, EditorHeader } from "@/components/admin/AdminContent";
-import { ThemeForm } from "@/components/admin/ThemeForm";
+import { LookForm } from "@/components/admin/LookForm";
 
 export default function Page() {
   return (
     <>
-      <EditorHeader eyebrow="// theme" title="Theme">
-        Colors for the HUD and the 3D world.
+      <EditorHeader eyebrow="// look" title="Look">
+        Colors, fonts, glow and the HUD frame. The preview updates as you change things.
       </EditorHeader>
       <Suspense fallback={<AdminLoading />}>
-        <AdminContent>{(site) => <ThemeForm theme={site.theme} />}</AdminContent>
+        <AdminContent>{(site) => <LookForm theme={site.theme} look={site.look} />}</AdminContent>
       </Suspense>
     </>
   );

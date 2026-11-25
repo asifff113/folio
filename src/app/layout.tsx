@@ -1,23 +1,36 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono, Manrope, Unbounded } from "next/font/google";
+import {
+  Exo_2,
+  IBM_Plex_Sans,
+  Inter,
+  JetBrains_Mono,
+  Manrope,
+  Orbitron,
+  Space_Grotesk,
+  Space_Mono,
+  Syne,
+  Unbounded,
+} from "next/font/google";
 import { getSiteContent } from "@/lib/content";
 import "./globals.css";
 
-const unbounded = Unbounded({
-  variable: "--font-unbounded",
-  subsets: ["latin"],
-  weight: ["400", "600", "800"],
-});
+/* The default pair (hologram) and the mono font load up front. */
+const unbounded = Unbounded({ variable: "--font-unbounded", subsets: ["latin"], weight: ["400", "600", "800"] });
+const manrope = Manrope({ variable: "--font-manrope", subsets: ["latin"] });
+const jetbrains = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"] });
 
-const manrope = Manrope({
-  variable: "--font-manrope",
-  subsets: ["latin"],
-});
+/* The other pairs you can pick in /admin/theme. Not preloaded: a browser only downloads the one in use. */
+const spaceMono = Space_Mono({ subsets: ["latin"], preload: false, display: "swap", variable: "--font-spacemono", weight: ["400", "700"] });
+const plexSans = IBM_Plex_Sans({ subsets: ["latin"], preload: false, display: "swap", variable: "--font-plexsans", weight: ["400", "500", "600"] });
+const orbitron = Orbitron({ subsets: ["latin"], preload: false, display: "swap", variable: "--font-orbitron" });
+const exo = Exo_2({ subsets: ["latin"], preload: false, display: "swap", variable: "--font-exo" });
+const syne = Syne({ subsets: ["latin"], preload: false, display: "swap", variable: "--font-syne" });
+const inter = Inter({ subsets: ["latin"], preload: false, display: "swap", variable: "--font-inter" });
+const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], preload: false, display: "swap", variable: "--font-spacegrotesk" });
 
-const jetbrains = JetBrains_Mono({
-  variable: "--font-jetbrains",
-  subsets: ["latin"],
-});
+const fontVariables = [unbounded, manrope, jetbrains, spaceMono, plexSans, orbitron, exo, syne, inter, spaceGrotesk]
+  .map((f) => f.variable)
+  .join(" ");
 
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getSiteContent();
@@ -26,10 +39,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      className={`${unbounded.variable} ${manrope.variable} ${jetbrains.variable} h-full antialiased`}
-    >
+    // The intro script may mark <html> as "intro seen" before React loads.
+    <html lang="en" className={`${fontVariables} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full bg-void text-fg">{children}</body>
     </html>
   );

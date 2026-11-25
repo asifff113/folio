@@ -12,7 +12,8 @@ import { clamp, emitJourneyFrame, journey } from "@/lib/journey/store";
  * section is centred in the viewport. Between two anchors the float goes from
  * k to k + 1. One animation loop drives Lenis, the smoothing and the listeners.
  */
-export function ScrollDriver() {
+/** `ease` is how quickly the 3D follows the scroll each frame (smaller = smoother, slower). */
+export function ScrollDriver({ ease = 0.075 }: { ease?: number }) {
   useEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     journey.reducedMotion = reduced;
@@ -67,8 +68,8 @@ export function ScrollDriver() {
       read();
 
       // Frame-rate independent easing (the factors are tuned for 60 fps).
-      const ease = 1 - Math.pow(1 - (reduced ? 0.25 : 0.075), dt * 60);
-      journey.current += (journey.target - journey.current) * ease;
+      const follow3d = 1 - Math.pow(1 - (reduced ? 0.25 : ease), dt * 60);
+      journey.current += (journey.target - journey.current) * follow3d;
       if (Math.abs(journey.target - journey.current) < 0.0005) journey.current = journey.target;
 
       const p = journey.pointer;
@@ -87,7 +88,7 @@ export function ScrollDriver() {
       lenis?.destroy();
       journey.lenis = null;
     };
-  }, []);
+  }, [ease]);
 
   return null;
 }

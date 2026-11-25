@@ -1,3 +1,12 @@
+import {
+  defaultJourney,
+  defaultLook,
+  defaultScene,
+  type JourneySettings,
+  type LookSettings,
+  type SceneSettings,
+} from "./customize";
+
 /**
  * Default site content.
  *
@@ -150,6 +159,9 @@ export type SiteConfig = {
   theme: Theme;
   help: HelpSettings & { items: HelpItem[] };
   traces: TraceSettings;
+  look: LookSettings;
+  scene: SceneSettings;
+  journey: JourneySettings;
 };
 
 export const defaultSite: SiteConfig = {
@@ -207,6 +219,9 @@ export const defaultSite: SiteConfig = {
     items: [],
   },
   traces: { enabled: true, approval: false, allowMessage: true, wallLimit: 300 },
+  look: defaultLook,
+  scene: defaultScene,
+  journey: defaultJourney,
 };
 
 /** Visitors who arrive from somewhere not in the list pick this one. */

@@ -8,6 +8,7 @@ import {
   type Theme,
   type TraceSettings,
 } from "@/config/site";
+import { normalizeJourney, normalizeLook, normalizeScene } from "@/config/customize";
 
 /** Validation for everything the admin panel saves. Limits match supabase/schema.sql. */
 type Result<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -377,3 +378,16 @@ export function parseTraceSettings(form: FormData): Result<TraceSettings> {
     },
   };
 }
+
+/* ---------- customization (look, 3D, journey) ---------- */
+
+/** The settings come as one JSON field and are cleaned by the same rules the site reads them with. */
+function parseSettings<T>(form: FormData, key: string, normalize: (raw: unknown) => T, label: string): Result<T> {
+  const raw = parseJson(form, key);
+  if (!raw || typeof raw !== "object") return { ok: false, error: `Could not read the ${label} settings. Reload and try again.` };
+  return { ok: true, data: normalize(raw) };
+}
+
+export const parseLook = (form: FormData) => parseSettings(form, "look", normalizeLook, "look");
+export const parseScene = (form: FormData) => parseSettings(form, "scene", normalizeScene, "3D");
+export const parseJourney = (form: FormData) => parseSettings(form, "journey", normalizeJourney, "journey");

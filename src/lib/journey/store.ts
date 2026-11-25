@@ -13,15 +13,27 @@ export type ChapterKey = FixedChapter | SectionChapter;
 
 export const isSectionChapter = (key: ChapterKey): key is SectionChapter => key.startsWith("S:");
 
-/** The chapters shown, in order, given which optional ones are on and which sections are shown. */
-export function journeyChapters(optional: { help: boolean; traces: boolean; sections: string[] }): ChapterKey[] {
-  const out: ChapterKey[] = [];
-  for (const key of ALL_CHAPTERS) {
-    if (key === "HELP" && !optional.help) continue;
-    if (key === "TRACES" && !optional.traces) continue;
-    out.push(key);
-    if (key === "INTERESTS") for (const s of optional.sections) out.push(`S:${s}`);
+/**
+ * The chapters shown, in order: BOOT first and END last, the rest in the
+ * admin's order (`SECTIONS` stands for all shown sections, in their own order).
+ */
+export function journeyChapters(optional: {
+  help: boolean;
+  traces: boolean;
+  sections: string[];
+  order?: readonly string[];
+}): ChapterKey[] {
+  const order = optional.order ?? ["ABOUT", "INTERESTS", "SECTIONS", "SIGNAL", "HELP", "TRACES"];
+  const out: ChapterKey[] = ["BOOT"];
+  for (const key of order) {
+    if (key === "SECTIONS") for (const s of optional.sections) out.push(`S:${s}`);
+    else if (key === "HELP") {
+      if (optional.help) out.push("HELP");
+    } else if (key === "TRACES") {
+      if (optional.traces) out.push("TRACES");
+    } else if (key === "ABOUT" || key === "INTERESTS" || key === "SIGNAL") out.push(key);
   }
+  out.push("END");
   return out;
 }
 
