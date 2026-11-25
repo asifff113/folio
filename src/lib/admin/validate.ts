@@ -1,4 +1,13 @@
-import { defaultSite, type HelpItem, type HelpSettings, type Platform, type Section, type Theme, type TraceSettings } from "@/config/site";
+import {
+  type HelpItem,
+  type HelpSettings,
+  PICKABLE_LAYOUTS,
+  type Platform,
+  type SectionItem,
+  type SectionLayout,
+  type Theme,
+  type TraceSettings,
+} from "@/config/site";
 
 /** Validation for everything the admin panel saves. Limits match supabase/schema.sql. */
 type Result<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -140,24 +149,137 @@ export function parsePlatforms(form: FormData): Result<Platform[]> {
   return { ok: true, data: out };
 }
 
-const SECTION_KEYS = new Set(defaultSite.sections.map((s) => s.key));
+/* ---------- sections ---------- */
 
-export function parseSections(form: FormData): Result<Section[]> {
+const SECTION_KEY = /^[a-z0-9_-]{1,32}$/;
+const PICKABLE = new Set<string>(PICKABLE_LAYOUTS.map((l) => l.id));
+
+export type SectionListEntry = { key: string; title: string; enabled: boolean };
+
+/** The sections list: order, titles and on/off. */
+export function parseSectionList(form: FormData): Result<SectionListEntry[]> {
   const raw = parseJson(form, "sections");
-  if (!Array.isArray(raw)) return { ok: false, error: "Could not read the sections. Reload and try again." };
+  if (!Array.isArray(raw) || raw.length > 60) return { ok: false, error: "Could not read the sections. Reload and try again." };
 
   const seen = new Set<string>();
-  const out: Section[] = [];
+  const out: SectionListEntry[] = [];
   for (const item of raw) {
-    const s = item as Partial<Section>;
+    const s = item as Partial<SectionListEntry>;
     const key = String(s.key ?? "");
     const title = String(s.title ?? "").trim();
-    if (!SECTION_KEYS.has(key) || seen.has(key)) return { ok: false, error: "Unknown section in the list." };
+    if (!SECTION_KEY.test(key) || seen.has(key)) return { ok: false, error: "Unknown section in the list." };
     if (!title || title.length > 40) return { ok: false, error: "Every section needs a title of 1 to 40 characters." };
     seen.add(key);
     out.push({ key, title, enabled: s.enabled === true });
   }
   return { ok: true, data: out };
+}
+
+/** "+ new section": a title and a layout. */
+export function parseNewSection(form: FormData): Result<{ title: string; layout: SectionLayout }> {
+  const title = text(form, "title");
+  const layout = text(form, "layout");
+  if (!title || title.length > 40) return { ok: false, error: "Give the section a title of 1 to 40 characters." };
+  if (!PICKABLE.has(layout)) return { ok: false, error: "Pick a layout." };
+  return { ok: true, data: { title, layout: layout as SectionLayout } };
+}
+
+/** A URL key for a new section, from its title ("Talks & panels" → "talks-panels"). */
+export function sectionKeyFrom(title: string) {
+  return (
+    title
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 28) || "section"
+  );
+}
+
+export function isOwnFile(url: string) {
+  return isOwnImage(url) && /\.pdf$/i.test(url);
+}
+
+export type SectionEdit = {
+  key: string;
+  title: string;
+  intro: string;
+  layout: SectionLayout;
+  enabled: boolean;
+  items: SectionItem[];
+};
+
+const MAX_ITEMS = 60;
+
+/** One section's editor: its settings and all its items. */
+export function parseSection(form: FormData): Result<SectionEdit> {
+  const raw = parseJson(form, "section") as (Partial<SectionEdit> & { items?: unknown }) | null;
+  if (!raw || typeof raw !== "object" || !Array.isArray(raw.items))
+    return { ok: false, error: "Could not read the section. Reload and try again." };
+
+  const key = String(raw.key ?? "");
+  const title = String(raw.title ?? "").trim();
+  const intro = String(raw.intro ?? "").trim();
+  const layout = String(raw.layout ?? "") as SectionLayout;
+  if (!SECTION_KEY.test(key)) return { ok: false, error: "Unknown section." };
+  if (!title || title.length > 40) return { ok: false, error: "The title needs 1 to 40 characters." };
+  if (intro.length > 240) return { ok: false, error: "The intro line can be at most 240 characters." };
+  if (!PICKABLE.has(layout) && layout !== "file" && layout !== "form") return { ok: false, error: "Pick a layout." };
+  if (raw.items.length > MAX_ITEMS) return { ok: false, error: `A section can hold at most ${MAX_ITEMS} items.` };
+
+  const seen = new Set<string>();
+  const items: SectionItem[] = [];
+  for (const [index, entry] of raw.items.entries()) {
+    const it = entry as Partial<SectionItem>;
+    const n = index + 1;
+    const str = (v: unknown) => String(v ?? "").trim();
+    const item: SectionItem = {
+      id: str(it.id),
+      title: str(it.title),
+      subtitle: str(it.subtitle),
+      date: str(it.date),
+      body: str(it.body),
+      details: String(it.details ?? "").replace(/\r\n/g, "\n").trim(),
+      image: str(it.image),
+      tags: Array.isArray(it.tags)
+        ? [...new Set(it.tags.map((t) => String(t).trim().toLowerCase()).filter(Boolean))]
+        : [],
+      link1Label: str(it.link1Label),
+      link1Url: str(it.link1Url),
+      link2Label: str(it.link2Label),
+      link2Url: str(it.link2Url),
+      level: Number(it.level ?? 0),
+      visible: it.visible !== false,
+    };
+    if (!UUID.test(item.id) || seen.has(item.id)) return { ok: false, error: "Item list is damaged. Reload and try again." };
+    seen.add(item.id);
+    const problem =
+      tooLong(`Item ${n} title`, item.title, 120) ??
+      tooLong(`Item ${n} second line`, item.subtitle, 120) ??
+      tooLong(`Item ${n} date`, item.date, 40) ??
+      tooLong(`Item ${n} short text`, item.body, 600) ??
+      tooLong(`Item ${n} details`, item.details, 4000) ??
+      tooLong(`Item ${n} link label`, item.link1Label, 24) ??
+      tooLong(`Item ${n} link label`, item.link2Label, 24);
+    if (problem) return { ok: false, error: problem };
+    if (item.tags.length > 8 || item.tags.some((t) => t.length > 24))
+      return { ok: false, error: `Item ${n}: use at most 8 tags of up to 24 characters.` };
+    if (!Number.isInteger(item.level) || item.level < 0 || item.level > 5)
+      return { ok: false, error: `Item ${n}: the level must be 0 to 5.` };
+    if (!isOwnImage(item.image)) return { ok: false, error: `Item ${n}: images must be uploaded here.` };
+    if (layout === "file") {
+      if (item.link1Url && !isOwnFile(item.link1Url)) return { ok: false, error: "Upload the resume as a PDF here." };
+    } else if (!isSafeUrl(item.link1Url) || !isSafeUrl(item.link2Url)) {
+      return { ok: false, error: `Item ${n}: links must start with https://, http:// or mailto:.` };
+    }
+    if (layout === "gallery" && !item.image) return { ok: false, error: `Photo ${n} has no image yet. Upload one or remove it.` };
+    if (layout === "skills" && !item.title) return { ok: false, error: `Skill ${n} needs a name.` };
+    if (layout === "links" && !item.link1Url) return { ok: false, error: `Link ${n} needs a URL.` };
+    if ((layout === "cards" || layout === "timeline") && !item.title)
+      return { ok: false, error: `Item ${n} needs a title.` };
+    items.push(item);
+  }
+  return { ok: true, data: { key, title, intro, layout, enabled: raw.enabled === true, items } };
 }
 
 export function parseTheme(form: FormData): Result<Theme> {

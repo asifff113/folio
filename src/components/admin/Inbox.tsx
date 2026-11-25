@@ -8,7 +8,7 @@ import { CopyButton, DeleteMessageButton, LocalTime, MarkRead } from "./InboxCli
 type Message = {
   id: string;
   item_id: string | null;
-  item_kind: "need" | "offer";
+  item_kind: "need" | "offer" | "contact";
   item_title: string;
   name: string;
   platform: string;
@@ -25,8 +25,16 @@ const FILTERS = [
   { id: "unread", label: "unread", test: (m: Message) => !m.archived && !m.is_read },
   { id: "offers", label: "offers to help", test: (m: Message) => !m.archived && m.item_kind === "need" },
   { id: "requests", label: "requests for you", test: (m: Message) => !m.archived && m.item_kind === "offer" },
+  { id: "contact", label: "contact form", test: (m: Message) => !m.archived && m.item_kind === "contact" },
   { id: "archived", label: "archived", test: (m: Message) => m.archived },
 ] as const;
+
+/** Label and colour for each kind of note. */
+const KIND: Record<Message["item_kind"], { short: string; long: string; color: string }> = {
+  need: { short: "OFFER", long: "OFFER TO HELP", color: "var(--pink)" },
+  offer: { short: "REQUEST", long: "REQUEST FOR YOU", color: "var(--holo)" },
+  contact: { short: "CONTACT", long: "CONTACT FORM", color: "#5dffb0" },
+};
 
 const PLATFORM_COLOR: Record<string, string> = {
   discord: "#5865f2",
@@ -120,11 +128,9 @@ export async function InboxView({ db, params }: { db: SupabaseClient; params: Pr
                       </span>
                       <LocalTime iso={msg.created_at} short className="font-mono text-[11px] text-muted" />
                     </span>
-                    <span
-                      className="truncate font-mono text-[11px]"
-                      style={{ color: msg.item_kind === "need" ? "#ff9be9" : "#8feeff" }}
-                    >
-                      {msg.item_kind === "need" ? "OFFER" : "REQUEST"} · {msg.item_title}
+                    <span className="truncate font-mono text-[11px]" style={{ color: KIND[msg.item_kind].color }}>
+                      {KIND[msg.item_kind].short}
+                      {msg.item_kind !== "contact" && ` · ${msg.item_title}`}
                     </span>
                     <span className="line-clamp-2 text-[14px] leading-snug text-[#b9d6e2]">{msg.note}</span>
                   </Link>
@@ -158,9 +164,9 @@ function MessageDetail({ msg }: { msg: Message }) {
         </div>
         <span
           className="border px-2 py-1 font-mono text-[10px] font-bold tracking-[0.12em]"
-          style={{ color: offer ? "var(--pink)" : "var(--holo)", borderColor: offer ? "var(--pink)" : "var(--holo)" }}
+          style={{ color: KIND[msg.item_kind].color, borderColor: KIND[msg.item_kind].color }}
         >
-          {offer ? "OFFER TO HELP" : "REQUEST FOR YOU"}
+          {KIND[msg.item_kind].long}
         </span>
       </div>
 
@@ -178,7 +184,7 @@ function MessageDetail({ msg }: { msg: Message }) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <span className="field-label m-0">re: {msg.item_title}</span>
+        <span className="field-label m-0">{msg.item_kind === "contact" ? "message" : `re: ${msg.item_title}`}</span>
         <p className="text-[16px] leading-relaxed whitespace-pre-line">{msg.note}</p>
       </div>
 

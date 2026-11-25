@@ -6,7 +6,7 @@ import { uploadImage } from "@/app/admin/actions";
 type Props = {
   /** Form field the URL is saved under (hidden input). Omit when the parent keeps the value. */
   name?: string;
-  folder: "avatar" | "qr";
+  folder: "avatar" | "qr" | "section";
   value: string;
   onChange: (url: string) => void;
   /** Shown when there is no image yet. */

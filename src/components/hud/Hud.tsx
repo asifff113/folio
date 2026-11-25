@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { type ChapterKey, onJourneyFrame } from "@/lib/journey/store";
+import { type ChapterKey, chapterLabel, onJourneyFrame } from "@/lib/journey/store";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -49,7 +49,7 @@ export function Hud({ handle, scanlines, chapters }: { handle: string; scanlines
             {pad(chapter + 1)} / {pad(chapters.length)}
           </b>
           <span key={chapter} className="chapter-glitch">
-            {chapters[chapter]}
+            {chapterLabel(chapters[chapter])}
           </span>
         </div>
 

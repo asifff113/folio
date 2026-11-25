@@ -1,17 +1,32 @@
 import type Lenis from "lenis";
 
 /**
- * Every chapter the journey can have, in scroll order. Optional ones (HELP, TRACES)
- * are left out when switched off; the 3D scene builds one shape and one
+ * The fixed chapters, in scroll order. Optional ones (HELP, TRACES) are left
+ * out when switched off, and the sections you turn on in the admin panel are
+ * inserted after INTERESTS as `S:<key>`. The 3D scene builds one shape and one
  * camera keyframe per chapter that is present.
  */
 export const ALL_CHAPTERS = ["BOOT", "ABOUT", "INTERESTS", "SIGNAL", "HELP", "TRACES", "END"] as const;
-export type ChapterKey = (typeof ALL_CHAPTERS)[number];
+export type FixedChapter = (typeof ALL_CHAPTERS)[number];
+export type SectionChapter = `S:${string}`;
+export type ChapterKey = FixedChapter | SectionChapter;
 
-/** The chapters shown, in order, given which optional ones are on. */
-export function journeyChapters(optional: { help: boolean; traces: boolean }): ChapterKey[] {
-  return ALL_CHAPTERS.filter((key) => (key !== "HELP" || optional.help) && (key !== "TRACES" || optional.traces));
+export const isSectionChapter = (key: ChapterKey): key is SectionChapter => key.startsWith("S:");
+
+/** The chapters shown, in order, given which optional ones are on and which sections are shown. */
+export function journeyChapters(optional: { help: boolean; traces: boolean; sections: string[] }): ChapterKey[] {
+  const out: ChapterKey[] = [];
+  for (const key of ALL_CHAPTERS) {
+    if (key === "HELP" && !optional.help) continue;
+    if (key === "TRACES" && !optional.traces) continue;
+    out.push(key);
+    if (key === "INTERESTS") for (const s of optional.sections) out.push(`S:${s}`);
+  }
+  return out;
 }
+
+/** Short name for the HUD. */
+export const chapterLabel = (key: ChapterKey) => (isSectionChapter(key) ? key.slice(2) : key).toUpperCase();
 
 /**
  * Shared, mutable journey state. It changes every frame, so it lives outside

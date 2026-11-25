@@ -5,7 +5,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import * as THREE from "three";
 import type { Theme } from "@/config/site";
-import { type ChapterKey, clamp, journey, ramp, smooth } from "@/lib/journey/store";
+import { type ChapterKey, type FixedChapter, clamp, isSectionChapter, journey, ramp, smooth } from "@/lib/journey/store";
 import { useTraces } from "@/lib/traces/store";
 import { buildParticles, glowTexture, hashRandom } from "./shapes";
 
@@ -33,7 +33,7 @@ export default function Scene({ theme, chapters }: SceneProps) {
       <color attach="background" args={["#05070c"]} />
       <fogExp2 attach="fog" args={["#05070c", 0.028]} />
       <CameraRig chapters={chapters} />
-      <Particles primary={theme.primary} secondary={theme.secondary} chapters={chapters} />
+      <Particles primary={theme.primary} secondary={theme.secondary} chapters={chapters} signal={at("SIGNAL")} />
       <Hologram primary={theme.primary} secondary={theme.secondary} signal={at("SIGNAL")} last={last} />
       <GridFloor primary={theme.primary} />
       <TunnelRings primary={theme.primary} signal={at("SIGNAL")} />
@@ -51,7 +51,7 @@ export default function Scene({ theme, chapters }: SceneProps) {
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 /** Where the camera sits and what it looks at, per chapter. */
-const KEYFRAMES: Record<ChapterKey, { pos: THREE.Vector3; look: THREE.Vector3 }> = {
+const KEYFRAMES: Record<FixedChapter, { pos: THREE.Vector3; look: THREE.Vector3 }> = {
   BOOT: { pos: V(0, 0.4, 9.5), look: V(0, 0, 0) },
   ABOUT: { pos: V(0, 8.5, 6), look: V(0, 0, 0) },
   INTERESTS: { pos: V(6, 0.6, 5.5), look: V(0, 0, 0) },
@@ -61,15 +61,33 @@ const KEYFRAMES: Record<ChapterKey, { pos: THREE.Vector3; look: THREE.Vector3 }>
   END: { pos: V(0, 1, -61.5), look: V(0, 0, -70) },
 };
 
+/**
+ * Camera stops for every chapter. Sections orbit the origin after INTERESTS,
+ * a little further round each time, alternating above and below.
+ */
+function keyframes(chapters: ChapterKey[]) {
+  let section = 0;
+  return chapters.map((key) => {
+    if (!isSectionChapter(key)) return KEYFRAMES[key];
+    const angle = 0.83 + 0.95 * (section + 1);
+    const y = section % 2 ? -1.3 : 1.7;
+    section += 1;
+    return { pos: V(Math.sin(angle) * 9.5, y, Math.cos(angle) * 9.5), look: V(0, 0, 0) };
+  });
+}
+
 function CameraRig({ chapters }: { chapters: ChapterKey[] }) {
   const width = useThree((s) => s.size.width);
   const pos = useMemo(() => new THREE.Vector3(), []);
   const look = useMemo(() => new THREE.Vector3(), []);
   const paths = useMemo(
-    () => ({
-      camera: new THREE.CatmullRomCurve3(chapters.map((k) => KEYFRAMES[k].pos), false, "centripetal"),
-      look: new THREE.CatmullRomCurve3(chapters.map((k) => KEYFRAMES[k].look), false, "centripetal"),
-    }),
+    () => {
+      const frames = keyframes(chapters);
+      return {
+        camera: new THREE.CatmullRomCurve3(frames.map((f) => f.pos), false, "centripetal"),
+        look: new THREE.CatmullRomCurve3(frames.map((f) => f.look), false, "centripetal"),
+      };
+    },
     [chapters],
   );
   const last = chapters.length - 1;
@@ -98,15 +116,16 @@ function CameraRig({ chapters }: { chapters: ChapterKey[] }) {
 
 type Colors = { primary: string; secondary: string };
 
-function Particles({ primary, secondary, chapters }: Colors & { chapters: ChapterKey[] }) {
+function Particles({ primary, secondary, chapters, signal }: Colors & { chapters: ChapterKey[]; signal: number }) {
   const data = useMemo(
     () => buildParticles(window.innerWidth < 720 ? 3200 : 5000, primary, secondary, chapters),
     [primary, secondary, chapters],
   );
   const last = chapters.length - 1;
   const points = useRef<THREE.Points>(null);
+  const spin = useRef(0);
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, dt) => {
     const obj = points.current;
     if (!obj) return;
     const t = clock.elapsedTime;
@@ -131,9 +150,15 @@ function Particles({ primary, secondary, chapters }: Colors & { chapters: Chapte
     }
     attr.needsUpdate = true;
 
-    // The cloud spins slowly only while it is the galaxy or the helix.
-    const spin = 1 - Math.min(1, Math.abs(s - 1.5) / 1.2);
-    obj.rotation.y = s > 0.5 && s < 2.6 ? t * 0.12 * spin : 0;
+    // The shapes around the origin (galaxy, helix, sections) turn slowly; before the
+    // tunnel the cloud eases back to a whole turn so the far shapes sit straight.
+    if (journey.reducedMotion) spin.current = 0;
+    else if (s > 0.5 && s < signal - 0.9) spin.current += Math.min(dt, 0.1) * 0.12;
+    else {
+      const rest = Math.round(spin.current / (Math.PI * 2)) * Math.PI * 2;
+      spin.current += (rest - spin.current) * Math.min(1, dt * 3);
+    }
+    obj.rotation.y = spin.current;
   });
 
   return (

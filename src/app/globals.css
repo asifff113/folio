@@ -231,6 +231,64 @@ body {
     height: 100%;
   }
 
+  /* ---------- section layouts (cards, gallery) ---------- */
+
+  /* Cards page sideways: three per page on wide screens, then two, then one. */
+  .card-track {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: calc((100% - 2 * 18px) / 3);
+    gap: 18px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .card-track::-webkit-scrollbar {
+    display: none;
+  }
+  @media (max-width: 1000px) {
+    .card-track { grid-auto-columns: calc((100% - 18px) / 2); }
+  }
+  @media (max-width: 640px) {
+    .card-track { grid-auto-columns: 100%; }
+  }
+  .card-tile {
+    display: flex;
+    flex-direction: column;
+    scroll-snap-align: start;
+    border: 1px solid color-mix(in srgb, var(--holo) 22%, transparent);
+    background: rgba(2, 10, 16, 0.55);
+    transition: border-color 0.2s;
+  }
+  .card-tile:hover {
+    border-color: color-mix(in srgb, var(--holo) 60%, transparent);
+  }
+  .card-date {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 3px 8px;
+    background: rgba(5, 7, 12, 0.72);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: #c9f7ff;
+  }
+  .pager-btn {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid color-mix(in srgb, var(--holo) 55%, transparent);
+    background: color-mix(in srgb, var(--holo) 8%, transparent);
+    color: var(--color-fg, #e4f6ff);
+    font-size: 20px;
+    cursor: pointer;
+  }
+  .pager-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
   /* ---------- opening screen ---------- */
 
   .boot-hero {

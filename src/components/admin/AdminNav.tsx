@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { type ReactNode, Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -14,14 +14,31 @@ const ITEMS = [
   { href: "/admin/traces", label: "traces", note: "signatures, sources" },
 ] as const;
 
-/** `badges` maps a menu link to something shown next to it (the unread count). */
-export function AdminNav({ badges = {} }: { badges?: Partial<Record<string, ReactNode>> }) {
-  const path = usePathname();
+type Badges = Partial<Record<string, ReactNode>>;
+
+/**
+ * The admin menu. `badges` maps a menu link to something shown next to it
+ * (the unread count). The current page is highlighted once the URL is known;
+ * until then (while a dynamic page streams in) the menu shows unhighlighted.
+ */
+export function AdminNav({ badges = {} }: { badges?: Badges }) {
+  return (
+    <Suspense fallback={<NavList path="" badges={badges} />}>
+      <LiveNav badges={badges} />
+    </Suspense>
+  );
+}
+
+function LiveNav({ badges }: { badges: Badges }) {
+  return <NavList path={usePathname()} badges={badges} />;
+}
+
+function NavList({ path, badges }: { path: string; badges: Badges }) {
   return (
     <nav aria-label="Admin sections">
       <ul className="flex gap-1.5 overflow-x-auto md:flex-col">
         {ITEMS.map((item) => {
-          const active = path === item.href;
+          const active = path === item.href || (item.href !== "/admin" && path.startsWith(`${item.href}/`));
           return (
             <li key={item.href}>
               <Link

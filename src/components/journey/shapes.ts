@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import type { ChapterKey } from "@/lib/journey/store";
+import { type ChapterKey, type FixedChapter, isSectionChapter } from "@/lib/journey/store";
 
 /** Small seeded PRNG so the particle layout is the same on every visit. */
 function mulberry32(seed: number) {
@@ -26,7 +26,8 @@ export type ParticleData = {
 
 /**
  * Builds one particle shape per chapter, in the order given:
- * boot sphere, galaxy, double helix, tunnel, exchange (help), trace wall, end sphere.
+ * boot sphere, galaxy, double helix, [section shapes], tunnel, exchange (help),
+ * trace wall, end sphere. Sections cycle through five shapes around the origin.
  */
 export function buildParticles(
   count: number,
@@ -128,7 +129,53 @@ export function buildParticles(
     return [x, y, -70 + 0.35 * Math.sin(x * 0.6) * Math.cos(y * 0.5)];
   });
 
-  const byChapter: Record<ChapterKey, Float32Array> = {
+  // Shapes for the sections you turn on, all around the origin like the galaxy and helix.
+  const lattice = shape(() => {
+    const n = 9;
+    const pick = () => (Math.floor(rnd() * n) / (n - 1) - 0.5) * 6.4;
+    const p: [number, number, number] = [pick(), pick(), pick()];
+    // Points run along the lattice lines, so the cube reads as a wireframe.
+    p[Math.floor(rnd() * 3)] = (rnd() - 0.5) * 6.4;
+    return p;
+  });
+  const torus = shape(() => {
+    const u = rnd() * Math.PI * 2;
+    const v = rnd() * Math.PI * 2;
+    const r = 1.15 + gauss() * 0.04;
+    const R = 3.6;
+    return [(R + r * Math.cos(v)) * Math.cos(u), r * Math.sin(v), (R + r * Math.cos(v)) * Math.sin(u)];
+  });
+  const waves = shape(() => {
+    const x = (rnd() - 0.5) * 13;
+    const z = (rnd() - 0.5) * 13;
+    const d = Math.hypot(x, z);
+    return [x, Math.sin(d * 1.3) * 0.9 * Math.exp(-d * 0.12) - 0.5, z];
+  });
+  const orbits = shape((i) => {
+    const ring = i % 4;
+    if (ring === 3) {
+      const y = 1 - 2 * rnd();
+      const r = Math.sqrt(1 - y * y);
+      const th = rnd() * Math.PI * 2;
+      const R = 0.9 + gauss() * 0.05;
+      return [Math.cos(th) * r * R, y * R, Math.sin(th) * r * R];
+    }
+    const a = rnd() * Math.PI * 2;
+    const R = 2.4 + ring * 1.15 + gauss() * 0.03;
+    const tilt = (ring - 1) * 0.55;
+    const x = Math.cos(a) * R;
+    const z = Math.sin(a) * R;
+    return [x, z * Math.sin(tilt), z * Math.cos(tilt)];
+  });
+  const vortex = shape(() => {
+    const t = rnd();
+    const a = t * Math.PI * 10 + gauss() * 0.15;
+    const R = 0.4 + t * 4.2;
+    return [Math.cos(a) * R, 3.6 - t * 7.2, Math.sin(a) * R];
+  });
+  const sectionShapes = [lattice, torus, waves, orbits, vortex];
+
+  const byChapter: Record<FixedChapter, Float32Array> = {
     BOOT: sphere(0),
     ABOUT: galaxy,
     INTERESTS: helix,
@@ -137,7 +184,10 @@ export function buildParticles(
     TRACES: wall,
     END: sphere(-70),
   };
-  const shapes = chapters.map((key) => byChapter[key]);
+  let section = 0;
+  const shapes = chapters.map((key) =>
+    isSectionChapter(key) ? sectionShapes[section++ % sectionShapes.length] : byChapter[key],
+  );
 
   const colors = new Float32Array(count * 3);
   const seed = new Float32Array(count);

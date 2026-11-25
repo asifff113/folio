@@ -1,8 +1,7 @@
 "use server";
 
-import { createHash } from "node:crypto";
-import { headers } from "next/headers";
 import { CONTACT_PLATFORMS } from "@/config/site";
+import { visitorFingerprint } from "@/lib/fingerprint";
 import { createPublicClient } from "@/lib/supabase/clients";
 
 export type ResponseState = { ok: boolean; message: string; at: number } | null;
@@ -43,10 +42,7 @@ export async function sendHelpResponse(_prev: ResponseState, form: FormData): Pr
   const supabase = createPublicClient();
   if (!supabase) return fail("The site isn't connected to its database yet.");
 
-  // Only a hash of the address is stored, and only to limit how often one visitor can send.
-  const h = await headers();
-  const address = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
-  const fingerprint = createHash("sha256").update(`folio:${address}`).digest("hex").slice(0, 32);
+  const fingerprint = await visitorFingerprint();
 
   const { error } = await supabase.rpc("submit_help_response", {
     p_item: item,

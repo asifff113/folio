@@ -1,7 +1,6 @@
 "use server";
 
-import { createHash } from "node:crypto";
-import { headers } from "next/headers";
+import { visitorFingerprint } from "@/lib/fingerprint";
 import { createPublicClient } from "@/lib/supabase/clients";
 
 export type TraceInput = {
@@ -47,10 +46,7 @@ export async function sendTrace(input: TraceInput): Promise<TraceResult> {
   const supabase = createPublicClient();
   if (!supabase) return { ok: false, message: "The site isn't connected to its database yet." };
 
-  // Only a hash of the address is stored, and only to limit how often one visitor can sign.
-  const h = await headers();
-  const address = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
-  const fingerprint = createHash("sha256").update(`folio:${address}`).digest("hex").slice(0, 32);
+  const fingerprint = await visitorFingerprint();
 
   const { data, error } = await supabase.rpc("submit_trace", {
     p_name: name,

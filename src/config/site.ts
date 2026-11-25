@@ -30,10 +30,63 @@ export type Theme = {
   scanlines: boolean;
 };
 
+/** How a section's items are shown. "file" (resume) and "form" (contact) are fixed to their built-in section. */
+export type SectionLayout = "cards" | "timeline" | "skills" | "gallery" | "text" | "links" | "file" | "form";
+
+/** Layouts you can pick for a section (the other two belong to resume and contact). */
+export const PICKABLE_LAYOUTS: { id: SectionLayout; name: string; desc: string; icon: string }[] = [
+  { id: "cards", name: "Cards", desc: "image, title, text, tags, links", icon: "▦" },
+  { id: "timeline", name: "Timeline", desc: "dates, role, place, text", icon: "┃" },
+  { id: "skills", name: "Skills", desc: "groups of tags, optional level", icon: "≡" },
+  { id: "gallery", name: "Gallery", desc: "photos with captions", icon: "▣" },
+  { id: "text", name: "Text", desc: "a heading and a few paragraphs", icon: "¶" },
+  { id: "links", name: "Links", desc: "a list of titled links", icon: "↗" },
+];
+
+/**
+ * One entry in a section. Every layout uses the same fields and ignores the
+ * ones it doesn't need (see supabase/phase6_sections.sql for which is which).
+ */
+export type SectionItem = {
+  id: string;
+  title: string;
+  subtitle: string;
+  date: string;
+  body: string;
+  details: string;
+  image: string;
+  tags: string[];
+  link1Label: string;
+  link1Url: string;
+  link2Label: string;
+  link2Url: string;
+  /** Skills only: 0 = no level shown, 1–5 = bars. */
+  level: number;
+  visible: boolean;
+};
+
 export type Section = {
   key: string;
   title: string;
   enabled: boolean;
+  layout: SectionLayout;
+  /** Optional line under the title. */
+  intro: string;
+  /** Made in the admin panel (can be deleted), as opposed to built in. */
+  custom: boolean;
+  items: SectionItem[];
+};
+
+/** Layout each built-in section starts with. */
+export const BUILTIN_LAYOUTS: Record<string, SectionLayout> = {
+  now: "text",
+  skills: "skills",
+  gallery: "gallery",
+  experience: "timeline",
+  education: "timeline",
+  resume: "file",
+  music: "links",
+  contact: "form",
 };
 
 export type HelpKind = "need" | "offer";
@@ -135,7 +188,15 @@ export const defaultSite: SiteConfig = {
     ["resume", "Resume"],
     ["music", "Music"],
     ["contact", "Contact form"],
-  ].map(([key, title]) => ({ key, title, enabled: false })),
+  ].map(([key, title]) => ({
+    key,
+    title,
+    enabled: false,
+    layout: BUILTIN_LAYOUTS[key] ?? "cards",
+    intro: "",
+    custom: false,
+    items: [],
+  })),
   theme: { primary: "#2fe3ff", secondary: "#ff4fd8", scanlines: true },
   help: {
     enabled: true,

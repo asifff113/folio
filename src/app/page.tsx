@@ -8,9 +8,11 @@ import { ConnectPanel } from "@/components/chapters/ConnectPanel";
 import { HelpPanel } from "@/components/chapters/HelpPanel";
 import { TracePanel } from "@/components/chapters/TracePanel";
 import { Hud } from "@/components/hud/Hud";
+import { SectionPanel } from "@/components/sections/SectionPanel";
 import { JourneyCanvas } from "@/components/journey/JourneyCanvas";
 import { ScrollDriver } from "@/components/journey/ScrollDriver";
 import { journeyChapters } from "@/lib/journey/store";
+import { sectionHasContent } from "@/lib/sections";
 
 /** QR codes (as SVG) for platforms set to "generated", dark on light so every phone can scan them. */
 async function qrCodesFor(platforms: Platform[]) {
@@ -33,7 +35,7 @@ async function qrCodesFor(platforms: Platform[]) {
 /**
  * The scroll-driven 3D journey: one fixed WebGL world behind the chapters.
  * Scrolling between chapters morphs the particles and moves the camera.
- * Optional chapters (help) only appear when switched on and filled in.
+ * Optional chapters (sections, help, traces) only appear when switched on and filled in.
  */
 export default async function Home() {
   const site = await getSiteContent();
@@ -48,7 +50,9 @@ export default async function Home() {
     helpSettings.enabled &&
     helpItems.some((i) => i.visible && (helpSettings.showSolved || i.status !== "solved"));
   const showTraces = site.traces.enabled;
-  const chapters = journeyChapters({ help: showHelp, traces: showTraces });
+  // Sections you switched on that have something to show, in your order.
+  const sections = site.sections.filter((s) => s.enabled && sectionHasContent(s));
+  const chapters = journeyChapters({ help: showHelp, traces: showTraces, sections: sections.map((s) => s.key) });
   const at = (key: (typeof chapters)[number]) => chapters.indexOf(key);
   const qrCodes = await qrCodesFor(platforms);
 
@@ -96,6 +100,12 @@ export default async function Home() {
             </ul>
           </Panel>
         </Chapter>
+
+        {sections.map((section) => (
+          <Chapter key={section.key} index={at(`S:${section.key}`)}>
+            <SectionPanel section={section} />
+          </Chapter>
+        ))}
 
         <Chapter index={at("SIGNAL")}>
           <ConnectPanel platforms={platforms} qrCodes={qrCodes} />
