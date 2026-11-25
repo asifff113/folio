@@ -1,4 +1,4 @@
-import { defaultSite, type HelpItem, type HelpSettings, type Platform, type Section, type Theme } from "@/config/site";
+import { defaultSite, type HelpItem, type HelpSettings, type Platform, type Section, type Theme, type TraceSettings } from "@/config/site";
 
 /** Validation for everything the admin panel saves. Limits match supabase/schema.sql. */
 type Result<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -235,6 +235,23 @@ export function parseHelp(form: FormData): Result<{ settings: HelpSettings; item
         showSolved: s.showSolved !== false,
       },
       items,
+    },
+  };
+}
+
+/* ---------- traces ---------- */
+
+export function parseTraceSettings(form: FormData): Result<TraceSettings> {
+  const wallLimit = Number(text(form, "wallLimit"));
+  if (!Number.isInteger(wallLimit) || wallLimit < 10 || wallLimit > 1000)
+    return { ok: false, error: "Stars on the wall must be a whole number from 10 to 1000." };
+  return {
+    ok: true,
+    data: {
+      enabled: form.get("enabled") === "on",
+      approval: form.get("approval") === "on",
+      allowMessage: form.get("allowMessage") === "on",
+      wallLimit,
     },
   };
 }

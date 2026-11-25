@@ -43,19 +43,19 @@ export default async function Home() {
     "--pink": site.theme.secondary,
     "--holo-dim": `color-mix(in srgb, ${site.theme.primary} 20%, transparent)`,
   } as CSSProperties;
-  const traceColors = Object.fromEntries([...platforms, otherPlatform].map((p) => [p.id, p.color]));
   const { items: helpItems, ...helpSettings } = site.help;
   const showHelp =
     helpSettings.enabled &&
     helpItems.some((i) => i.visible && (helpSettings.showSolved || i.status !== "solved"));
-  const chapters = journeyChapters({ help: showHelp });
+  const showTraces = site.traces.enabled;
+  const chapters = journeyChapters({ help: showHelp, traces: showTraces });
   const at = (key: (typeof chapters)[number]) => chapters.indexOf(key);
   const qrCodes = await qrCodesFor(platforms);
 
   return (
     <div style={themeVars}>
       <ScrollDriver />
-      <JourneyCanvas theme={site.theme} traceColors={traceColors} chapters={chapters} />
+      <JourneyCanvas theme={site.theme} chapters={chapters} />
       <Hud handle={site.handle} scanlines={site.theme.scanlines} chapters={chapters} />
 
       <main className="relative z-[3]">
@@ -107,14 +107,19 @@ export default async function Home() {
           </Chapter>
         )}
 
-        <Chapter index={at("TRACES")}>
-          <TracePanel platforms={[...platforms, otherPlatform]} />
-        </Chapter>
+        {showTraces && (
+          <Chapter index={at("TRACES")}>
+            <TracePanel platforms={[...platforms, otherPlatform]} settings={site.traces} />
+          </Chapter>
+        )}
 
         <Chapter index={at("END")}>
           <Panel eyebrow="// end of transmission">
             <h2 className="panel-title">Thanks for stopping by.</h2>
-            <p className="panel-text">Leave a trace on your way out, or come back any time. The signal stays on.</p>
+            <p className="panel-text">
+              {showTraces ? "Leave a trace on your way out, or come back any time." : "Come back any time."} The signal stays
+              on.
+            </p>
             <div className="mt-6">
               <BackToTop />
             </div>

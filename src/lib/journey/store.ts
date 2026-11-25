@@ -1,7 +1,7 @@
 import type Lenis from "lenis";
 
 /**
- * Every chapter the journey can have, in scroll order. Optional ones (HELP)
+ * Every chapter the journey can have, in scroll order. Optional ones (HELP, TRACES)
  * are left out when switched off; the 3D scene builds one shape and one
  * camera keyframe per chapter that is present.
  */
@@ -9,8 +9,8 @@ export const ALL_CHAPTERS = ["BOOT", "ABOUT", "INTERESTS", "SIGNAL", "HELP", "TR
 export type ChapterKey = (typeof ALL_CHAPTERS)[number];
 
 /** The chapters shown, in order, given which optional ones are on. */
-export function journeyChapters(optional: { help: boolean }): ChapterKey[] {
-  return ALL_CHAPTERS.filter((key) => key !== "HELP" || optional.help);
+export function journeyChapters(optional: { help: boolean; traces: boolean }): ChapterKey[] {
+  return ALL_CHAPTERS.filter((key) => (key !== "HELP" || optional.help) && (key !== "TRACES" || optional.traces));
 }
 
 /**

@@ -1,7 +1,7 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { defaultSite, type HelpItem, type HelpSettings, type Platform, type SiteConfig, type Theme } from "@/config/site";
+import { defaultSite, type HelpItem, type HelpSettings, type Platform, type SiteConfig, type Theme, type TraceSettings } from "@/config/site";
 import { createPublicClient } from "@/lib/supabase/clients";
 
 /** Cache tag for everything the public site reads. Admin saves expire it. */
@@ -18,6 +18,7 @@ type ProfileRow = {
   interests_tags: string[];
   theme: Partial<Theme> | null;
   help: Partial<HelpSettings> | null;
+  traces: Partial<TraceSettings> | null;
 };
 
 type PlatformRow = {
@@ -78,6 +79,7 @@ export async function readSiteContent(supabase: SupabaseClient): Promise<SiteCon
     sections: sections.data ?? defaultSite.sections,
     theme: { ...defaultSite.theme, ...(p?.theme ?? {}) },
     help: { ...defaultSite.help, ...(p?.help ?? {}), items: help.data ?? [] },
+    traces: { ...defaultSite.traces, ...(p?.traces ?? {}) },
   };
 }
 

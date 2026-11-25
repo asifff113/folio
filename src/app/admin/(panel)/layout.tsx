@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { AccountBadge } from "@/components/admin/AdminContent";
 import { UnreadBadge } from "@/components/admin/Inbox";
+import { WaitingBadge } from "@/components/admin/Traces";
 
 export default function PanelLayout({ children }: { children: ReactNode }) {
   return (
@@ -21,12 +22,17 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
           </Link>
         </span>
       </header>
-      <div className="grid gap-8 md:grid-cols-[200px_minmax(0,1fr)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 md:grid-cols-[200px_minmax(0,1fr)]">
         <AdminNav
           badges={{
             "/admin/inbox": (
               <Suspense fallback={null}>
                 <UnreadBadge />
+              </Suspense>
+            ),
+            "/admin/traces": (
+              <Suspense fallback={null}>
+                <WaitingBadge />
               </Suspense>
             ),
           }}

@@ -4,7 +4,7 @@ import { useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import * as THREE from "three";
-import { otherPlatform, type Theme } from "@/config/site";
+import type { Theme } from "@/config/site";
 import { type ChapterKey, clamp, journey, ramp, smooth } from "@/lib/journey/store";
 import { useTraces } from "@/lib/traces/store";
 import { buildParticles, glowTexture, hashRandom } from "./shapes";
@@ -13,12 +13,10 @@ type SceneProps = {
   theme: Theme;
   /** Chapters present, in scroll order. */
   chapters: ChapterKey[];
-  /** Platform id → color, for the trace stars. */
-  traceColors: Record<string, string>;
 };
 
 /** The whole WebGL world. Every part reads `journey.current` each frame. */
-export default function Scene({ theme, traceColors, chapters }: SceneProps) {
+export default function Scene({ theme, chapters }: SceneProps) {
   const last = chapters.length - 1;
   const at = (key: ChapterKey) => chapters.indexOf(key);
   return (
@@ -39,7 +37,9 @@ export default function Scene({ theme, traceColors, chapters }: SceneProps) {
       <Hologram primary={theme.primary} secondary={theme.secondary} signal={at("SIGNAL")} last={last} />
       <GridFloor primary={theme.primary} />
       <TunnelRings primary={theme.primary} signal={at("SIGNAL")} />
-      <TraceStars colors={traceColors} traces={at("TRACES")} />
+      {at("TRACES") >= 0 && (
+        <TraceStars palette={[theme.primary, theme.secondary, "#bff6ff", "#a58bff"]} traces={at("TRACES")} />
+      )}
       <EffectComposer>
         <Bloom mipmapBlur intensity={0.55} luminanceThreshold={0.25} luminanceSmoothing={0.3} />
       </EffectComposer>
@@ -255,8 +255,9 @@ function TunnelRings({ primary, signal }: { primary: string; signal: number }) {
 
 /* ---------- traces: one glowing star per visitor on the wall ---------- */
 
-function TraceStars({ colors, traces: chapter }: { colors: Record<string, string>; traces: number }) {
-  const traces = useTraces();
+/** Star colours come from the theme, not from where people came from (that stays private). */
+function TraceStars({ palette, traces: chapter }: { palette: string[]; traces: number }) {
+  const { traces } = useTraces();
   const group = useRef<THREE.Group>(null);
 
   const stars = useMemo(
@@ -265,14 +266,14 @@ function TraceStars({ colors, traces: chapter }: { colors: Record<string, string
         const r = hashRandom(t.id);
         return {
           id: t.id,
-          color: colors[t.platform] ?? otherPlatform.color,
+          color: palette[Math.floor(r() * palette.length) % palette.length],
           createdAt: t.createdAt,
           position: [(r() * 2 - 1) * 8.5, (r() * 2 - 1) * 4.5, -69.6] as [number, number, number],
           base: 0.7 + r() * 0.4,
           phase: r() * 6.3,
         };
       }),
-    [traces, colors],
+    [traces, palette],
   );
 
   useFrame(({ clock }) => {

@@ -11,6 +11,7 @@ const ITEMS = [
   { href: "/admin/theme", label: "theme", note: "colors, effects" },
   { href: "/admin/help", label: "help", note: "ready to help me?" },
   { href: "/admin/inbox", label: "inbox", note: "notes from visitors" },
+  { href: "/admin/traces", label: "traces", note: "signatures, sources" },
 ] as const;
 
 /** `badges` maps a menu link to something shown next to it (the unread count). */

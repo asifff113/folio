@@ -63,6 +63,17 @@ export type HelpSettings = {
   showSolved: boolean;
 };
 
+export type TraceSettings = {
+  /** Show the traces chapter. */
+  enabled: boolean;
+  /** New traces wait in the admin panel until approved. */
+  approval: boolean;
+  /** Visitors can add a short "say hi" next to their signature. */
+  allowMessage: boolean;
+  /** How many of the newest traces become stars on the wall. */
+  wallLimit: number;
+};
+
 /** Ways a visitor can leave their contact in a help response. */
 export const CONTACT_PLATFORMS = [
   { id: "discord", label: "Discord", placeholder: "@username" },
@@ -85,6 +96,7 @@ export type SiteConfig = {
   sections: Section[];
   theme: Theme;
   help: HelpSettings & { items: HelpItem[] };
+  traces: TraceSettings;
 };
 
 export const defaultSite: SiteConfig = {
@@ -133,6 +145,7 @@ export const defaultSite: SiteConfig = {
     showSolved: true,
     items: [],
   },
+  traces: { enabled: true, approval: false, allowMessage: true, wallLimit: 300 },
 };
 
 /** Visitors who arrive from somewhere not in the list pick this one. */

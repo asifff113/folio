@@ -1,81 +1,144 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import type { Platform } from "@/config/site";
-import { addTrace, useTraces } from "@/lib/traces/store";
+import { useEffect, useRef, useState, useTransition } from "react";
+import type { Platform, TraceSettings } from "@/config/site";
+import { sendTrace } from "@/app/trace-actions";
+import { visitSource } from "@/lib/source";
+import { addOwnTrace, setWallLimit, useTraces } from "@/lib/traces/store";
 import { Panel } from "./Chapter";
 
-const time = (ms: number) => new Date(ms).toTimeString().slice(0, 5);
+/** "just now", "4m ago", "3h ago", "2d ago", then the date. */
+function ago(ms: number, now: number) {
+  const s = Math.max(0, (now - ms) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  if (s < 86400 * 7) return `${Math.floor(s / 86400)}d ago`;
+  return new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+/** The current time, refreshed every 30 seconds (0 before the page is interactive). */
+function useNow() {
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    const first = window.setTimeout(tick, 0);
+    const id = window.setInterval(tick, 30_000);
+    return () => {
+      window.clearTimeout(first);
+      window.clearInterval(id);
+    };
+  }, []);
+  return now;
+}
 
 /**
- * Trace log plus the "leave your trace" form.
- * Phase 2: traces stay in this browser. Phase 5 saves them and detects the referrer.
+ * The traces log plus the "leave your trace" form. Names are optional and
+ * where someone found you is only stored for the admin, never shown here.
  */
-export function TracePanel({ platforms }: { platforms: Platform[] }) {
-  const traces = useTraces();
+export function TracePanel({ platforms, settings }: { platforms: Platform[]; settings: TraceSettings }) {
+  const wall = useTraces();
+  const now = useNow();
   const [platform, setPlatform] = useState<string | null>(null);
+  const [detected, setDetected] = useState("direct");
   const [name, setName] = useState("");
+  const [note, setNote] = useState("");
   const [message, setMessage] = useState("");
-  const [toast, setToast] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const [freshId, setFreshId] = useState<string | null>(null);
+  const [pending, start] = useTransition();
   const { canvasRef, inked, clearPad, exportImage } = useSignaturePad();
-  const colorOf = (id: string) => platforms.find((p) => p.id === id)?.color ?? "#a58bff";
+
+  useEffect(() => setWallLimit(settings.wallLimit), [settings.wallLimit]);
+
+  // Pre-select where the visitor came from, when it is one of the choices.
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      const source = visitSource();
+      setDetected(source);
+      if (platforms.some((p) => p.id === source)) setPlatform((current) => current ?? source);
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [platforms]);
 
   useEffect(() => {
     if (!toast) return;
-    const id = window.setTimeout(() => setToast(false), 3000);
+    const id = window.setTimeout(() => setToast(null), 3500);
     return () => window.clearTimeout(id);
   }, [toast]);
 
   const send = () => {
-    if (!inked || !platform) {
-      setMessage(
-        !inked && !platform
-          ? "draw a signature and pick a platform"
-          : !inked
-            ? "draw a signature first"
-            : "pick where you came from",
-      );
+    if (pending) return;
+    if (!inked) {
+      setMessage("draw a signature first");
       return;
     }
-    const id = addTrace({ name: name.trim().slice(0, 24) || "anonymous", platform, signature: exportImage() });
-    setFreshId(id);
-    clearPad();
-    setName("");
-    setMessage("signal received");
-    setToast(true);
+    const signature = exportImage();
+    const trace = { name: name.trim().slice(0, 24), message: settings.allowMessage ? note.trim().slice(0, 60) : "" };
+    setMessage("sending...");
+    start(async () => {
+      const result = await sendTrace({ ...trace, signature, platform: platform ?? "", detected });
+      if (!result.ok) {
+        setMessage(result.message);
+        return;
+      }
+      if (result.status === "live") {
+        addOwnTrace({ id: result.id, ...trace, signature, createdAt: Date.parse(result.createdAt) || Date.now() });
+        setFreshId(result.id);
+        setToast("trace://received · your star is on the wall");
+        setMessage("signal received");
+      } else {
+        setToast("trace://received · it shows up once it's approved");
+        setMessage("received, it shows up once it's approved");
+      }
+      clearPad();
+      setName("");
+      setNote("");
+    });
   };
+
+  const log = wall.traces.slice(0, 6);
 
   return (
     <Panel
       eyebrow={
         <>
           {"// traces · "}
-          {traces.length} signals
+          {wall.total} {wall.total === 1 ? "signal" : "signals"}
         </>
       }
     >
       <h2 className="panel-title">Leave your trace.</h2>
+      <p className="panel-text">Sign the wall. Every signature becomes a star behind this box. A name is optional.</p>
 
-      <ul className="mb-4 max-h-[240px] overflow-hidden">
-        {traces
-          .slice(-6)
-          .reverse()
-          .map((t) => (
+      {wall.ready && log.length === 0 ? (
+        <p className="my-4 border-y border-holo/10 py-3 font-mono text-[15px] text-[#9fc3d3]">
+          No traces yet. Be the first to sign.
+        </p>
+      ) : (
+        <ul aria-label="Latest traces" className="my-4 flex flex-col">
+          {log.map((t) => (
             <li
               key={t.id}
-              className={`grid grid-cols-[auto_8px_minmax(0,1fr)_auto] items-center gap-2.5 border-b border-holo/10 py-2 font-mono text-[13px] text-[#b4e8f5] ${t.id === freshId ? "trace-new" : ""}`}
+              className={`grid grid-cols-[minmax(72px,auto)_minmax(0,1fr)_auto] items-center gap-3 border-b border-holo/10 px-1 py-2 font-mono text-[15px] text-[#c6eef9] ${
+                t.id === freshId ? "trace-new" : ""
+              }`}
             >
-              <span>{time(t.createdAt)}</span>
-              <i className="size-[7px] rounded-full" style={{ background: colorOf(t.platform) }} />
+              <span className="text-[#8fb6c6]">{now ? ago(t.createdAt, now) : ""}</span>
               <span className="truncate">
-                {t.platform} · {t.name}
+                {t.name ? <b className="text-fg">{t.name}</b> : <span className="text-[#8fb6c6]">someone</span>}
+                {t.message && <span className="text-[#9fc3d3]"> — {t.message}</span>}
               </span>
-              {/* eslint-disable-next-line @next/next/no-img-element -- data URL signature */}
-              <img alt="" src={t.signature} className="h-[22px] w-auto drop-shadow-[0_0_3px_rgba(47,227,255,.6)]" />
+              {t.signature ? (
+                // eslint-disable-next-line @next/next/no-img-element -- data URL signature
+                <img alt="" src={t.signature} className="h-[28px] w-auto drop-shadow-[0_0_3px_rgba(47,227,255,.6)]" />
+              ) : (
+                <span />
+              )}
             </li>
           ))}
-      </ul>
+        </ul>
+      )}
 
       <label className="field-label" htmlFor="signature">
         signature
@@ -88,7 +151,7 @@ export function TracePanel({ platforms }: { platforms: Platform[] }) {
           className="block size-full cursor-crosshair touch-none"
         />
         {!inked && (
-          <span className="pointer-events-none absolute inset-0 grid place-items-center font-mono text-[14px] text-[#4f7a8c]">
+          <span className="pointer-events-none absolute inset-0 grid place-items-center font-mono text-[14px] text-[#6f9aab]">
             draw here
           </span>
         )}
@@ -98,7 +161,7 @@ export function TracePanel({ platforms }: { platforms: Platform[] }) {
       </div>
 
       <p className="field-label" id="from-label">
-        i came from
+        where did you find me? <span className="normal-case">(optional · only I see this)</span>
       </p>
       <div className="flex flex-wrap gap-1.5" role="group" aria-labelledby="from-label">
         {platforms.map((p) => (
@@ -107,7 +170,7 @@ export function TracePanel({ platforms }: { platforms: Platform[] }) {
             type="button"
             className="chip"
             aria-pressed={platform === p.id}
-            onClick={() => setPlatform(p.id)}
+            onClick={() => setPlatform(platform === p.id ? null : p.id)}
           >
             <i style={{ background: p.color }} />
             {p.label.toLowerCase()}
@@ -115,32 +178,52 @@ export function TracePanel({ platforms }: { platforms: Platform[] }) {
         ))}
       </div>
 
-      <label className="field-label" htmlFor="trace-name">
-        name or handle (optional)
-      </label>
-      <input
-        id="trace-name"
-        type="text"
-        maxLength={24}
-        placeholder="@yourhandle"
-        autoComplete="off"
-        className="text-input"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
+      <div className={`grid gap-x-4 ${settings.allowMessage ? "sm:grid-cols-2" : ""}`}>
+        <div>
+          <label className="field-label" htmlFor="trace-name">
+            name or handle (optional)
+          </label>
+          <input
+            id="trace-name"
+            type="text"
+            maxLength={24}
+            placeholder="leave empty to stay anonymous"
+            autoComplete="off"
+            className="text-input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+        {settings.allowMessage && (
+          <div>
+            <label className="field-label" htmlFor="trace-note">
+              say hi (optional · 60 chars)
+            </label>
+            <input
+              id="trace-note"
+              type="text"
+              maxLength={60}
+              autoComplete="off"
+              className="text-input"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </div>
+        )}
+      </div>
 
-      <div className="mt-3.5 flex flex-wrap items-center gap-3">
-        <button type="button" className="btn" onClick={send}>
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button type="button" className="btn" onClick={send} disabled={pending}>
           &gt; send_trace()
         </button>
         <p className="font-mono text-[13px] text-muted" role="status">
-          {message}
+          {message || "one trace per visitor per hour"}
         </p>
       </div>
 
       {toast && (
         <div className="fixed top-[calc(52px+env(safe-area-inset-top,0px))] left-1/2 z-[5] -translate-x-1/2 border border-holo bg-[rgba(4,14,22,.9)] px-4 py-2.5 font-mono text-[13px] whitespace-nowrap text-fg">
-          trace://received · your star is on the wall
+          {toast}
         </div>
       )}
     </Panel>
@@ -227,12 +310,13 @@ function useSignaturePad() {
     setInk(false);
   };
 
+  /** The signature as a small PNG (220 × 80), the size stored in the database. */
   const exportImage = () => {
     const out = document.createElement("canvas");
     out.width = 220;
     out.height = 80;
     if (canvas.current) out.getContext("2d")?.drawImage(canvas.current, 0, 0, 220, 80);
-    return out.toDataURL();
+    return out.toDataURL("image/png");
   };
 
   return { canvasRef: canvas, inked, clearPad: clear, exportImage };

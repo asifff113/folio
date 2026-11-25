@@ -7,7 +7,7 @@ import type { ChapterKey } from "@/lib/journey/store";
 // three.js needs the browser, so the scene is only loaded on the client.
 const Scene = dynamic(() => import("./Scene"), { ssr: false });
 
-export function JourneyCanvas(props: { theme: Theme; traceColors: Record<string, string>; chapters: ChapterKey[] }) {
+export function JourneyCanvas(props: { theme: Theme; chapters: ChapterKey[] }) {
   return (
     <div className="fixed inset-0 z-0" aria-hidden="true">
       <Scene {...props} />

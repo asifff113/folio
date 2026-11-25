@@ -4,7 +4,7 @@ import { refresh, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { SITE_TAG } from "@/lib/content";
 import { getAdminSession } from "@/lib/admin/session";
-import { parseHelp, parsePlatforms, parseProfile, parseSections, parseTheme } from "@/lib/admin/validate";
+import { parseHelp, parsePlatforms, parseProfile, parseSections, parseTheme, parseTraceSettings } from "@/lib/admin/validate";
 import { createAuthClient } from "@/lib/supabase/clients";
 
 export type FormState = { ok: boolean; message: string; at: number } | null;
@@ -137,7 +137,7 @@ export async function saveHelp(_prev: FormState, form: FormData): Promise<FormSt
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Runs an inbox change as the admin and refreshes the admin pages (unread badge included). */
+/** Runs an inbox or traces change as the admin and refreshes the admin pages (badges included). */
 async function inboxChange(id: string, change: (supabase: AdminClient) => PromiseLike<{ error: { message: string } | null }>) {
   if (!UUID.test(id)) return;
   const session = await getAdminSession();
@@ -166,6 +166,30 @@ export async function setItemStatus(itemId: string, status: "open" | "in_progres
   if (!["open", "in_progress", "solved"].includes(status)) return;
   await inboxChange(itemId, (db) => db.from("help_items").update({ status }).eq("id", itemId));
   updateTag(SITE_TAG);
+}
+
+/* ---------- traces ---------- */
+
+export async function saveTraceSettings(_prev: FormState, form: FormData): Promise<FormState> {
+  const parsed = parseTraceSettings(form);
+  if (!parsed.ok) return fail(parsed.error);
+
+  return asAdmin(async (supabase) => {
+    const { error } = await supabase
+      .from("profile")
+      .upsert({ id: 1, traces: parsed.data, updated_at: new Date().toISOString() });
+    return error ? `Could not save: ${error.message}` : null;
+  });
+}
+
+/** Approve, hide or show a trace. Open pages update live (database broadcast). */
+export async function setTraceStatus(id: string, status: "live" | "hidden") {
+  if (status !== "live" && status !== "hidden") return;
+  await inboxChange(id, (db) => db.from("traces").update({ status }).eq("id", id));
+}
+
+export async function deleteTrace(id: string) {
+  await inboxChange(id, (db) => db.from("traces").delete().eq("id", id));
 }
 
 /* ---------- image uploads (profile picture, QR images) ---------- */
