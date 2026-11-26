@@ -19,7 +19,9 @@ export function CardsLayout({ items }: { items: SectionItem[] }) {
     const update = () => {
       // A partly filled last page still counts as a page.
       const max = el.scrollWidth - el.clientWidth;
-      const of = max > 2 ? Math.ceil((el.scrollWidth - 2) / el.clientWidth) : 1;
+      const gap = parseFloat(getComputedStyle(el).columnGap) || 0;
+      // Count the gaps between cards too, or 4 one-up cards on a phone read as 5 pages.
+      const of = max > 2 ? Math.ceil((el.scrollWidth + gap - 2) / (el.clientWidth + gap)) : 1;
       const at = of === 1 ? 1 : Math.round((el.scrollLeft / max) * (of - 1)) + 1;
       setPage((p) => (p.at === at && p.of === of ? p : { at, of }));
     };
@@ -35,7 +37,9 @@ export function CardsLayout({ items }: { items: SectionItem[] }) {
 
   const go = (by: number) => {
     const el = track.current;
-    if (el) el.scrollBy({ left: by * el.clientWidth, behavior: "smooth" });
+    if (!el) return;
+    const gap = parseFloat(getComputedStyle(el).columnGap) || 0;
+    el.scrollBy({ left: by * (el.clientWidth + gap), behavior: "smooth" });
   };
 
   return (

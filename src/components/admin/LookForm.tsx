@@ -114,6 +114,10 @@ export function LookForm({ theme, look: initial }: { theme: Theme; look: LookSet
             <Slider label="Glass blur" value={look.blur} onChange={(v) => set("blur", v)} />
             <Slider label="Box opacity" value={look.boxOpacity} onChange={(v) => set("boxOpacity", v)} />
           </div>
+          <p className="text-[13px] text-muted">
+            Glass blur is off at 0. Blurring the moving 3D behind the boxes looks soft but costs about 20 frames per
+            second, so keep it low or off for phones and older laptops.
+          </p>
           <div className="flex flex-wrap gap-x-6 gap-y-2.5">
             <Check label="Scanlines" checked={scanlines} onChange={setScanlines} />
             <Check label="Film grain" checked={look.grain} onChange={(v) => set("grain", v)} />

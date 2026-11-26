@@ -145,7 +145,7 @@ export async function SiteJourney({ site, banner }: { site: SiteConfig; banner?:
   };
 
   return (
-    <div style={lookStyle(site)} className="site">
+    <div style={lookStyle(site)} className={look.blur === 0 ? "site no-glass" : "site"}>
       <ScrollDriver ease={sceneNumbers(site.scene).ease} />
       <JourneyCanvas theme={site.theme} chapters={chapters} look={look} scene={site.scene} />
       <Hud handle={site.handle} scanlines={site.theme.scanlines} chapters={chapters} look={look} />

@@ -198,7 +198,9 @@ body,
     display: flex;
     justify-content: center;
     width: 100%;
-    will-change: transform, opacity;
+    /* Not "opacity": an ancestor with will-change: opacity (or opacity < 1) is a backdrop root and
+       switches off the glass blur of the box inside it. */
+    will-change: transform;
   }
 
   /*
@@ -240,6 +242,10 @@ body,
   }
   .panel-wide {
     max-width: 1240px;
+  }
+  /* Glass blur set to 0 in /admin: skip the backdrop pass entirely (it still costs time at 0px). */
+  .no-glass .panel {
+    backdrop-filter: none;
   }
   /* Only the visitor chapters scale (admin forms stay as they are). */
   .chapter-fx > .panel {

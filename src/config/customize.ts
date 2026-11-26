@@ -63,7 +63,9 @@ export const defaultLook: LookSettings = {
   textScale: 100,
   glow: 46,
   haze: 42,
-  blur: 57,
+  // Off by default: blurring the moving 3D behind the boxes costs ~20 fps (measured), and the site's
+  // shipped look never had a visible blur (an ancestor's will-change: opacity had disabled it).
+  blur: 0,
   boxOpacity: 50,
   grain: false,
   vignette: false,
