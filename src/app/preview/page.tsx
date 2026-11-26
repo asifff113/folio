@@ -30,7 +30,7 @@ async function Preview() {
     <SiteJourney
       site={site}
       banner={
-        <p className="fixed top-[calc(44px+env(safe-area-inset-top,0px))] left-1/2 z-[6] flex -translate-x-1/2 flex-wrap items-center gap-3 border border-[#ffb23b] bg-[rgba(20,14,4,.92)] px-4 py-2 font-mono text-[12px] text-[#ffd79a]">
+        <p className="fixed top-[calc(80px+env(safe-area-inset-top,0px))] left-1/2 z-[6] flex -translate-x-1/2 flex-wrap items-center gap-3 border border-[#ffb23b] bg-[rgba(20,14,4,.92)] px-4 py-2 font-mono text-[12px] text-[#ffd79a]">
           private preview
           {site.journey.maintenance ? " · visitors see the maintenance screen" : ""}
           <Link href="/admin/journey" className="text-holo">

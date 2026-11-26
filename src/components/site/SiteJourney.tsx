@@ -9,10 +9,12 @@ import { HelpPanel } from "@/components/chapters/HelpPanel";
 import { TracePanel } from "@/components/chapters/TracePanel";
 import { WaveName } from "@/components/chapters/WaveName";
 import { Hud } from "@/components/hud/Hud";
+import { TopNav } from "@/components/hud/TopNav";
 import { JourneyCanvas } from "@/components/journey/JourneyCanvas";
 import { ScrollDriver } from "@/components/journey/ScrollDriver";
 import { SectionPanel } from "@/components/sections/SectionPanel";
 import { type ChapterKey, isSectionChapter, journeyChapters } from "@/lib/journey/store";
+import { navItems } from "@/lib/journey/nav";
 import { sectionHasContent } from "@/lib/sections";
 import { defaultJourney, sceneNumbers } from "@/config/customize";
 import { personJsonLd } from "@/lib/seo";
@@ -59,6 +61,8 @@ export async function SiteJourney({ site, banner }: { site: SiteConfig; banner?:
     order: journey.order,
   });
   const qrCodes = await qrCodesFor(platforms);
+  const nav = journey.nav;
+  const navLinks = navItems(chapters, nav, Object.fromEntries(sections.map((s) => [s.key, s.title])));
   const endText =
     !showTraces && journey.endText === defaultJourney.endText ? "Come back any time. The signal stays on." : journey.endText;
 
@@ -148,7 +152,23 @@ export async function SiteJourney({ site, banner }: { site: SiteConfig; banner?:
     <div style={lookStyle(site)} className={look.blur === 0 ? "site no-glass" : "site"}>
       <ScrollDriver ease={sceneNumbers(site.scene).ease} />
       <JourneyCanvas theme={site.theme} chapters={chapters} look={look} scene={site.scene} />
-      <Hud handle={site.handle} scanlines={site.theme.scanlines} chapters={chapters} look={look} />
+      <Hud
+        handle={site.handle}
+        scanlines={site.theme.scanlines}
+        chapters={chapters}
+        look={look}
+        topBar={!nav.enabled}
+      />
+      {nav.enabled && (
+        <TopNav
+          handle={site.handle}
+          items={navLinks}
+          links={nav.links}
+          autoHide={nav.autoHide}
+          online={look.hud === "full" && look.hudOnline}
+          clock={look.hud === "full" && look.hudClock}
+        />
+      )}
       {look.vignette && <div className="look-vignette" aria-hidden="true" />}
       {look.grain && <div className="film-grain" aria-hidden="true" />}
       {banner}

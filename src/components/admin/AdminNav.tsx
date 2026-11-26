@@ -10,7 +10,7 @@ const ITEMS = [
   { href: "/admin/sections", label: "sections", note: "optional chapters" },
   { href: "/admin/theme", label: "look", note: "colors, fonts, glow, HUD" },
   { href: "/admin/3d", label: "3d", note: "shapes, particles, motion" },
-  { href: "/admin/journey", label: "journey", note: "order, intro, maintenance" },
+  { href: "/admin/journey", label: "journey", note: "order, nav, intro, maintenance" },
   { href: "/admin/seo", label: "seo", note: "search, share image, icon" },
   { href: "/admin/help", label: "help", note: "ready to help me?" },
   { href: "/admin/inbox", label: "inbox", note: "notes from visitors" },

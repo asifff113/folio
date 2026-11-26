@@ -18,11 +18,14 @@ export function Hud({
   scanlines,
   chapters,
   look,
+  topBar = true,
 }: {
   handle: string;
   scanlines: boolean;
   chapters: ChapterKey[];
   look: HudLook;
+  /** Off when the nav bar is on: it shows the handle and clock itself. */
+  topBar?: boolean;
 }) {
   const [chapter, setChapter] = useState(0);
   const last = Math.max(1, chapters.length - 1);
@@ -37,6 +40,7 @@ export function Hud({
       if (fill.current) fill.current.style.height = `${(s / last) * 100}%`;
       setChapter(Math.round(s));
     });
+    if (!topBar) return off;
     const tickClock = () => {
       if (clock.current) clock.current.textContent = new Date().toTimeString().slice(0, 8);
     };
@@ -46,7 +50,7 @@ export function Hud({
       off();
       window.clearInterval(id);
     };
-  }, [last]);
+  }, [last, topBar]);
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[2]" aria-hidden="true">
@@ -60,19 +64,21 @@ export function Hud({
               <span className="hud-corner bl" />
               <span className="hud-corner br" />
 
-              <div className="absolute inset-x-5 top-3.5 flex justify-between gap-2.5 font-mono text-[11px] font-medium tracking-[0.14em] text-holo">
-                <span>SYS://{handle.toUpperCase()}</span>
-                {(look.hudOnline || look.hudClock) && (
-                  <span>
-                    {look.hudOnline && (
-                      <>
-                        <span className="blink">●</span> ONLINE{" "}
-                      </>
-                    )}
-                    {look.hudClock && <span ref={clock}>--:--:--</span>}
-                  </span>
-                )}
-              </div>
+              {topBar && (
+                <div className="absolute inset-x-5 top-3.5 flex justify-between gap-2.5 font-mono text-[11px] font-medium tracking-[0.14em] text-holo">
+                  <span>SYS://{handle.toUpperCase()}</span>
+                  {(look.hudOnline || look.hudClock) && (
+                    <span>
+                      {look.hudOnline && (
+                        <>
+                          <span className="blink">●</span> ONLINE{" "}
+                        </>
+                      )}
+                      {look.hudClock && <span ref={clock}>--:--:--</span>}
+                    </span>
+                  )}
+                </div>
+              )}
             </>
           )}
 

@@ -196,8 +196,56 @@ export type MovableChapter = (typeof MOVABLE_CHAPTERS)[number];
 export const INTRO_STYLES = ["boot", "wave", "none"] as const;
 export type IntroStyle = (typeof INTRO_STYLES)[number];
 
+/** An extra link at the end of the nav bar, like a resume or another site. */
+export type NavLink = { label: string; url: string };
+
+/**
+ * The top nav bar. Every chapter on the page is in it unless listed in
+ * `hidden`, so a section you switch on later shows up by itself.
+ */
+export type NavSettings = {
+  enabled: boolean;
+  /** Slide away while scrolling down, come back on scrolling up. */
+  autoHide: boolean;
+  /** Chapter keys left out of the nav (BOOT, ABOUT, S:projects, ...). */
+  hidden: string[];
+  /** Your own name for a chapter in the nav. Missing or empty = the usual name. */
+  labels: Record<string, string>;
+  links: NavLink[];
+};
+
+export const NAV_LABEL_MAX = 24;
+export const NAV_LINKS_MAX = 4;
+const NAV_KEY = /^(BOOT|ABOUT|INTERESTS|SIGNAL|HELP|TRACES|END|S:[a-z0-9_-]{1,40})$/;
+const NAV_URL = /^(https?:\/\/[^\s/$.?#][^\s]*|mailto:[^\s@]+@[^\s@]+)$/i;
+
+export const defaultNav: NavSettings = { enabled: true, autoHide: true, hidden: [], labels: {}, links: [] };
+
+/** Whether a nav link address is one the site will use (https://, http:// or mailto:). */
+export const isNavUrl = (url: string) => url.length <= 300 && NAV_URL.test(url);
+
+export function normalizeNav(raw: unknown): NavSettings {
+  const r = obj(raw);
+  const d = defaultNav;
+  const hidden = (Array.isArray(r.hidden) ? r.hidden : [])
+    .filter((k): k is string => typeof k === "string" && NAV_KEY.test(k))
+    .filter((k, i, all) => all.indexOf(k) === i)
+    .slice(0, 60);
+  const labels: Record<string, string> = {};
+  for (const [key, value] of Object.entries(obj(r.labels))) {
+    const label = str(value, "", NAV_LABEL_MAX);
+    if (NAV_KEY.test(key) && label && Object.keys(labels).length < 60) labels[key] = label;
+  }
+  const links = (Array.isArray(r.links) ? r.links : [])
+    .map((l) => ({ label: str(obj(l).label, "", NAV_LABEL_MAX), url: str(obj(l).url, "", 300) }))
+    .filter((l) => l.label && isNavUrl(l.url))
+    .slice(0, NAV_LINKS_MAX);
+  return { enabled: bool(r.enabled, d.enabled), autoHide: bool(r.autoHide, d.autoHide), hidden, labels, links };
+}
+
 export type JourneySettings = {
   order: MovableChapter[];
+  nav: NavSettings;
   connectTitle: string;
   tracesTitle: string;
   tracesText: string;
@@ -214,6 +262,7 @@ export type JourneySettings = {
 
 export const defaultJourney: JourneySettings = {
   order: [...MOVABLE_CHAPTERS],
+  nav: defaultNav,
   connectTitle: "Connect with me.",
   tracesTitle: "Leave your trace.",
   tracesText: "Sign the wall. Every signature becomes a star behind this box. A name is optional.",
@@ -249,6 +298,7 @@ export function normalizeJourney(raw: unknown): JourneySettings {
     .join("\n");
   return {
     order,
+    nav: normalizeNav(r.nav),
     connectTitle: str(r.connectTitle, d.connectTitle, 80) || d.connectTitle,
     tracesTitle: str(r.tracesTitle, d.tracesTitle, 80) || d.tracesTitle,
     tracesText: str(r.tracesText, d.tracesText, 240),

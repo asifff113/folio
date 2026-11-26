@@ -5,6 +5,7 @@ import { useActionState, useState } from "react";
 import { INTRO_STYLES, type JourneySettings, type MovableChapter } from "@/config/customize";
 import { saveJourney } from "@/app/admin/actions";
 import { Check, Group, Slider } from "./controls";
+import { type NavChapterInfo, NavGroup } from "./NavGroup";
 import { moveItem, useDragReorder } from "./reorder";
 import { SaveBar } from "./ui";
 
@@ -18,10 +19,13 @@ const INTRO_NAMES: Record<(typeof INTRO_STYLES)[number], string> = {
 export function JourneyForm({
   journey: initial,
   labels,
+  navInfo,
 }: {
   journey: JourneySettings;
   /** Name and note for each movable chapter. */
   labels: Record<MovableChapter, { name: string; note: string }>;
+  /** What is on the page now, for the nav bar list. */
+  navInfo: NavChapterInfo;
 }) {
   const [state, action] = useActionState(saveJourney, null);
   const [journey, setJourney] = useState(initial);
@@ -88,6 +92,8 @@ export function JourneyForm({
             or empty are skipped.
           </p>
         </Group>
+
+        <NavGroup nav={journey.nav} order={journey.order} info={navInfo} onChange={(nav) => set("nav", nav)} />
 
         <Group title="chapter text">
           <TextField label="connect · heading" value={journey.connectTitle} max={80} onChange={(v) => set("connectTitle", v)} />

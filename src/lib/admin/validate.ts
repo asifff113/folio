@@ -8,7 +8,14 @@ import {
   type Theme,
   type TraceSettings,
 } from "@/config/site";
-import { normalizeJourney, normalizeLook, normalizeScene, normalizeSeo } from "@/config/customize";
+import {
+  isNavUrl,
+  NAV_LINKS_MAX,
+  normalizeJourney,
+  normalizeLook,
+  normalizeScene,
+  normalizeSeo,
+} from "@/config/customize";
 
 /** Validation for everything the admin panel saves. Limits match supabase/schema.sql. */
 type Result<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -390,7 +397,24 @@ function parseSettings<T>(form: FormData, key: string, normalize: (raw: unknown)
 
 export const parseLook = (form: FormData) => parseSettings(form, "look", normalizeLook, "look");
 export const parseScene = (form: FormData) => parseSettings(form, "scene", normalizeScene, "3D");
-export const parseJourney = (form: FormData) => parseSettings(form, "journey", normalizeJourney, "journey");
+/** Journey, including the nav bar. A nav link with a name needs a usable address, and the other way round. */
+export function parseJourney(form: FormData): Result<ReturnType<typeof normalizeJourney>> {
+  const parsed = parseSettings(form, "journey", normalizeJourney, "journey");
+  if (!parsed.ok) return parsed;
+  const raw = parseJson(form, "journey") as { nav?: { links?: unknown } } | null;
+  const links = Array.isArray(raw?.nav?.links) ? (raw.nav.links as { label?: unknown; url?: unknown }[]) : [];
+  for (const link of links) {
+    const label = typeof link?.label === "string" ? link.label.trim() : "";
+    const url = typeof link?.url === "string" ? link.url.trim() : "";
+    if (!label && !url) continue;
+    if (!label) return { ok: false, error: "Give each nav link a name, or remove it." };
+    if (!isNavUrl(url))
+      return { ok: false, error: `The nav link "${label}" needs an address starting with https:// or mailto:.` };
+  }
+  if (links.filter((l) => l?.label || l?.url).length > NAV_LINKS_MAX)
+    return { ok: false, error: `Up to ${NAV_LINKS_MAX} extra nav links.` };
+  return parsed;
+}
 
 /** SEO & sharing. An uploaded share image must come from this site's storage. */
 export function parseSeo(form: FormData): Result<ReturnType<typeof normalizeSeo>> {

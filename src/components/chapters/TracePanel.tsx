@@ -232,7 +232,7 @@ export function TracePanel({
       </div>
 
       {toast && (
-        <div className="fixed top-[calc(52px+env(safe-area-inset-top,0px))] left-1/2 z-[5] -translate-x-1/2 border border-holo bg-[rgba(4,14,22,.9)] px-4 py-2.5 font-mono text-[13px] whitespace-nowrap text-fg">
+        <div className="fixed top-[calc(80px+env(safe-area-inset-top,0px))] left-1/2 z-[5] -translate-x-1/2 border border-holo bg-[rgba(4,14,22,.9)] px-4 py-2.5 font-mono text-[13px] whitespace-nowrap text-fg">
           {toast}
         </div>
       )}

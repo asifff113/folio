@@ -75,6 +75,19 @@ export function scrollToTop() {
   else window.scrollTo({ top: 0, behavior: journey.reducedMotion ? "auto" : "smooth" });
 }
 
+/** Scrolls so chapter `index` sits centred on screen, where its 3D shape is fully formed. */
+export function scrollToChapter(index: number) {
+  const el = document.querySelector<HTMLElement>(`[data-chapter="${index}"]`);
+  if (!el) return;
+  const max = document.documentElement.scrollHeight - window.innerHeight;
+  const top = el.getBoundingClientRect().top + window.scrollY;
+  const y = clamp(top + el.offsetHeight / 2 - window.innerHeight / 2, 0, max);
+  // Far jumps get a little longer so the camera flight stays readable.
+  const chapters = Math.abs(index - journey.target);
+  if (journey.lenis) journey.lenis.scrollTo(y, { duration: Math.min(2.4, 0.9 + chapters * 0.25) });
+  else window.scrollTo({ top: y, behavior: journey.reducedMotion ? "auto" : "smooth" });
+}
+
 export const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 export const smooth = (t: number) => t * t * (3 - 2 * t);
 /** 0 → 1 as `s` moves from `from` to `from + span`, eased. */
