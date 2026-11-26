@@ -15,6 +15,7 @@ import {
   normalizeLook,
   normalizeScene,
   normalizeSeo,
+  normalizeVisitors,
 } from "@/config/customize";
 
 /** Validation for everything the admin panel saves. Limits match supabase/schema.sql. */
@@ -415,6 +416,8 @@ export function parseJourney(form: FormData): Result<ReturnType<typeof normalize
     return { ok: false, error: `Up to ${NAV_LINKS_MAX} extra nav links.` };
   return parsed;
 }
+
+export const parseVisitors = (form: FormData) => parseSettings(form, "visitors", normalizeVisitors, "visitor");
 
 /** SEO & sharing. An uploaded share image must come from this site's storage. */
 export function parseSeo(form: FormData): Result<ReturnType<typeof normalizeSeo>> {

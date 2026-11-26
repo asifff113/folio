@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { LookSettings } from "@/config/customize";
 import { type ChapterKey, chapterLabel, onJourneyFrame } from "@/lib/journey/store";
+import { VisitCounter } from "./VisitCounter";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -67,6 +68,7 @@ export function Hud({
               {topBar && (
                 <div className="absolute inset-x-5 top-3.5 flex justify-between gap-2.5 font-mono text-[11px] font-medium tracking-[0.14em] text-holo">
                   <span>SYS://{handle.toUpperCase()}</span>
+                  <VisitCounter className="hud-counter" />
                   {(look.hudOnline || look.hudClock) && (
                     <span>
                       {look.hudOnline && (

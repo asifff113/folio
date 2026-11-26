@@ -17,6 +17,7 @@ import {
   parseSeo,
   parseTheme,
   parseTraceSettings,
+  parseVisitors,
   sectionKeyFrom,
 } from "@/lib/admin/validate";
 import { createAuthClient } from "@/lib/supabase/clients";
@@ -244,6 +245,28 @@ export async function saveSeo(_prev: FormState, form: FormData): Promise<FormSta
       .upsert({ id: 1, seo: seo.data, updated_at: new Date().toISOString() });
     return error ? `Could not save: ${error.message}` : null;
   });
+}
+
+/** Visitors: whether the public counter shows, and what it counts. */
+export async function saveVisitors(_prev: FormState, form: FormData): Promise<FormState> {
+  const parsed = parseVisitors(form);
+  if (!parsed.ok) return fail(parsed.error);
+  return asAdmin(async (supabase) => {
+    const { error } = await supabase
+      .from("profile")
+      .upsert({ id: 1, visitors: parsed.data, updated_at: new Date().toISOString() });
+    return error ? `Could not save: ${error.message}` : null;
+  });
+}
+
+/** Visitors: delete every counted visit and start from zero. */
+export async function resetVisits(): Promise<FormState> {
+  const session = await getAdminSession();
+  if (session.state !== "admin") return fail("Your session ended or this account is not an admin. Sign in again.");
+  const { error } = await session.supabase.rpc("reset_visits");
+  if (error) return fail(`Could not reset: ${error.message}`);
+  refresh();
+  return { ok: true, message: "All counts are back to zero.", at: Date.now() };
 }
 
 /** Journey: chapter order and text, intro, maintenance mode. */

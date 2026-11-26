@@ -10,6 +10,7 @@ import { TracePanel } from "@/components/chapters/TracePanel";
 import { WaveName } from "@/components/chapters/WaveName";
 import { Hud } from "@/components/hud/Hud";
 import { TopNav } from "@/components/hud/TopNav";
+import { VisitTracker } from "@/components/hud/VisitTracker";
 import { JourneyCanvas } from "@/components/journey/JourneyCanvas";
 import { ScrollDriver } from "@/components/journey/ScrollDriver";
 import { SectionPanel } from "@/components/sections/SectionPanel";
@@ -151,6 +152,7 @@ export async function SiteJourney({ site, banner }: { site: SiteConfig; banner?:
   return (
     <div style={lookStyle(site)} className={look.blur === 0 ? "site no-glass" : "site"}>
       <ScrollDriver ease={sceneNumbers(site.scene).ease} />
+      <VisitTracker chapters={chapters} />
       <JourneyCanvas theme={site.theme} chapters={chapters} look={look} scene={site.scene} />
       <Hud
         handle={site.handle}

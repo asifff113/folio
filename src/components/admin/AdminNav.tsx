@@ -12,6 +12,7 @@ const ITEMS = [
   { href: "/admin/3d", label: "3d", note: "shapes, particles, motion" },
   { href: "/admin/journey", label: "journey", note: "order, nav, intro, maintenance" },
   { href: "/admin/seo", label: "seo", note: "search, share image, icon" },
+  { href: "/admin/visitors", label: "visitors", note: "who came, from where" },
   { href: "/admin/help", label: "help", note: "ready to help me?" },
   { href: "/admin/inbox", label: "inbox", note: "notes from visitors" },
   { href: "/admin/traces", label: "traces", note: "signatures, sources" },

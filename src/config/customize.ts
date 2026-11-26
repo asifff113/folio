@@ -356,3 +356,21 @@ export function normalizeSeo(raw: unknown): SeoSettings {
     icon: pick(r.icon, ["letter", "avatar"] as const, d.icon),
   };
 }
+
+/* ---------- visitors ---------- */
+
+export const COUNTER_KINDS = ["people", "visits"] as const;
+export type CounterKind = (typeof COUNTER_KINDS)[number];
+
+/** The public visitor counter. Counting itself is always on; this only decides what visitors see. */
+export type VisitorSettings = { counter: boolean; counterKind: CounterKind };
+
+export const defaultVisitors: VisitorSettings = { counter: false, counterKind: "people" };
+
+export function normalizeVisitors(raw: unknown): VisitorSettings {
+  const r = obj(raw);
+  return {
+    counter: bool(r.counter, defaultVisitors.counter),
+    counterKind: pick(r.counterKind, COUNTER_KINDS, defaultVisitors.counterKind),
+  };
+}

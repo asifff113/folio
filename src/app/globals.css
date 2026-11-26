@@ -333,6 +333,56 @@ body,
     }
   }
 
+  /* ---------- visitor counter (switched on in Admin > Visitors) ---------- */
+
+  .top-nav-counter,
+  .nav-sheet-counter,
+  .hud-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+    color: var(--holo);
+  }
+  .top-nav-counter {
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid color-mix(in srgb, var(--holo) 35%, transparent);
+    background: color-mix(in srgb, var(--holo) 6%, transparent);
+  }
+  .nav-sheet-counter {
+    justify-content: space-between;
+    margin-top: 12px;
+    padding: 14px 16px;
+    border: 1px solid color-mix(in srgb, var(--holo) 35%, transparent);
+    background: color-mix(in srgb, var(--holo) 6%, transparent);
+    font: 500 12px var(--font-mono);
+    letter-spacing: 0.14em;
+  }
+  .nav-sheet-counter .counter-digits {
+    font-size: 18px;
+  }
+  .counter-digits {
+    display: inline-flex;
+    overflow: hidden;
+    font-weight: 500;
+    color: var(--fg);
+    font-variant-numeric: tabular-nums;
+  }
+  /* A digit that changes rolls up into place. */
+  .counter-digits .digit {
+    display: inline-block;
+    animation: digit-roll 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  @keyframes digit-roll {
+    from { transform: translateY(100%); opacity: 0; }
+  }
+  @media (max-width: 720px) {
+    .top-nav-counter {
+      display: none;
+    }
+  }
+
   /* The full-screen list behind the MENU button. */
   .nav-sheet {
     position: fixed;
@@ -933,7 +983,8 @@ html[data-intro-seen="1"] .intro-overlay {
   [data-on="1"] > .panel::before,
   [data-on="1"] > .panel::after,
   [data-on="1"] > * > *,
-  .nav-sheet {
+  .nav-sheet,
+  .counter-digits .digit {
     animation: none;
   }
   .top-nav {

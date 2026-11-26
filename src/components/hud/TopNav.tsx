@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { NavLink } from "@/config/customize";
 import type { NavItem } from "@/lib/journey/nav";
 import { journey, onJourneyFrame, scrollToChapter } from "@/lib/journey/store";
+import { VisitCounter } from "./VisitCounter";
 
 const pad = (n: number) => String(n + 1).padStart(2, "0");
 const opensTab = (url: string) => /^https?:/i.test(url);
@@ -167,6 +168,8 @@ export function TopNav({
           </nav>
         </div>
 
+        <VisitCounter className="top-nav-counter" />
+
         {(online || clock) && (
           <span className="top-nav-status" aria-hidden="true">
             {online && (
@@ -242,6 +245,7 @@ export function TopNav({
               </ul>
             )}
           </nav>
+          <VisitCounter className="nav-sheet-counter" />
           <p className="nav-sheet-foot">Tap a chapter and the camera flies there.</p>
         </div>
       )}
